@@ -1,0 +1,78 @@
+import { Button, VerticalBox, ListView, GridBox, ScrollView, HorizontalBox } from "std-widgets.slint";
+
+component TableView inherits Rectangle {
+    in property <[string]> columns;
+    in property <[[string]]> values;
+
+    VerticalBox {
+        HorizontalLayout {
+            HorizontalLayout{
+                width: 40px;
+                Text {
+                    text: " ";
+                }
+                Rectangle {
+                    width: 1px;
+                    background: gray;
+                }
+            }
+            HorizontalLayout{
+                padding-left: 10px;
+                Text {
+                    text: @tr("File");
+                }
+                Rectangle {
+                    width: 1px;
+                    background: gray;
+                }
+            }
+            HorizontalLayout{
+                width: 80px;
+                padding-left: 10px;
+                Text {
+                    text: @tr("Size");
+                }
+                Rectangle {
+                    width: 1px;
+                    background: gray;
+                }
+            }
+            HorizontalLayout{
+                padding-left: 10px;
+                width: 80px;
+                Text {
+                    text: @tr("Savings");
+                }
+                Rectangle {
+                    width: 1px;
+                    background: gray;
+                }
+            }
+            HorizontalLayout{
+                width: 80px;
+                padding-left: 10px;
+                Text {
+                    text: @tr("Dssim");
+                }
+            }
+        }
+        ScrollView {
+            Rectangle { width: 30px; height: 30px; x: 275px; y: 50px; background: blue; }
+            Rectangle { width: 30px; height: 30px; x: 175px; y: 130px; background: red; }
+            Rectangle { width: 30px; height: 30px; x: 25px; y: 210px; background: yellow; }
+            Rectangle { width: 30px; height: 30px; x: 98px; y: 55px; background: orange; }
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    preferred-width: 700px;
+    preferred-height: 500px;
+    title: @tr("Image Converter");
+    in property <[string]> columns;
+    in property <[[string]]> values;
+    TableView {
+        columns: root.columns;
+        values: root.values;
+    }
+}
