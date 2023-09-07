@@ -6,6 +6,7 @@ component TableView inherits Rectangle {
 
     VerticalBox {
         HorizontalLayout {
+            width: parent.width - 28px;
             HorizontalLayout{
                 width: 40px;
                 Text {
@@ -56,11 +57,33 @@ component TableView inherits Rectangle {
                 }
             }
         }
-        ScrollView {
-            Rectangle { width: 30px; height: 30px; x: 275px; y: 50px; background: blue; }
-            Rectangle { width: 30px; height: 30px; x: 175px; y: 130px; background: red; }
-            Rectangle { width: 30px; height: 30px; x: 25px; y: 210px; background: yellow; }
-            Rectangle { width: 30px; height: 30px; x: 98px; y: 55px; background: orange; }
+        ListView {
+            for item in values : HorizontalLayout {
+                padding-bottom: 10px;
+                Text {
+                    width: 40px;
+                    text: item[0];
+                }
+                Text {
+                    padding-left: 10px;
+                    text: item[1];
+                }
+                Text {
+                    padding-left: 10px;
+                    width: 80px;
+                    text: item[2];
+                }
+                Text {
+                    padding-left: 10px;
+                    width: 80px;
+                    text: item[3];
+                }
+                Text {
+                    padding-left: 10px;
+                    width: 80px;
+                    text: item[4];
+                }
+            }
         }
     }
 }
