@@ -3,6 +3,7 @@ import { Button, VerticalBox, ListView, GridBox, ScrollView, HorizontalBox } fro
 component TableView inherits Rectangle {
     in property <[string]> columns;
     in property <[[string]]> values;
+    callback show-open-dialog;
 
     VerticalBox {
         HorizontalLayout {
@@ -58,31 +59,47 @@ component TableView inherits Rectangle {
             }
         }
         ListView {
+            padding-bottom: 0;
             for item in values : HorizontalLayout {
                 padding-bottom: 10px;
                 Text {
                     width: 40px;
                     text: item[0];
                 }
-                Text {
-                    padding-left: 10px;
-                    text: item[1];
+                HorizontalLayout{
+                    padding-left: 8px;
+                    Text {
+                        text: item[1];
+                    }
                 }
-                Text {
+                HorizontalLayout {
                     padding-left: 10px;
-                    width: 80px;
-                    text: item[2];
+                    Text {
+                        width: 70px;
+                        text: item[2];
+                    }
                 }
-                Text {
+                HorizontalLayout {
                     padding-left: 10px;
-                    width: 80px;
-                    text: item[3];
+                    Text {
+                        width: 70px;
+                        text: item[3];
+                    }
                 }
-                Text {
+                HorizontalLayout {
                     padding-left: 10px;
-                    width: 80px;
-                    text: item[4];
+                    Text {
+                        width: 70px;
+                        text: item[4];
+                    }
                 }
+            }
+        }
+        HorizontalLayout {
+            Button {
+                width: 40px;
+                text: "+";
+                clicked => { root.show-open-dialog(); }
             }
         }
     }
@@ -91,10 +108,12 @@ component TableView inherits Rectangle {
 export component AppWindow inherits Window {
     preferred-width: 700px;
     preferred-height: 500px;
+    callback show-open-dialog;
     title: @tr("Image Converter");
     in property <[string]> columns;
     in property <[[string]]> values;
     TableView {
+        show-open-dialog => { root.show-open-dialog(); }
         columns: root.columns;
         values: root.values;
     }
