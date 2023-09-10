@@ -3,7 +3,6 @@ use glob::{glob, PatternError};
 use rfd::FileDialog;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 use snafu::{ResultExt, Snafu};
-use std::sync::Arc;
 use std::{path::PathBuf, rc::Rc};
 
 slint::include_modules!();
@@ -20,13 +19,16 @@ enum Error {
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-fn new_model_shared_string_slice(data: &Vec<String>) -> ModelRc<SharedString> {
+fn new_model_shared_string_slice(data: &[String]) -> ModelRc<SharedString> {
     let columns: Vec<SharedString> = data.iter().map(SharedString::from).collect();
     ModelRc::from(Rc::new(VecModel::from(columns)))
 }
 
-fn new_model_shared_string_slices(data: &Vec<Vec<String>>) -> ModelRc<ModelRc<SharedString>> {
-    let arr: Vec<ModelRc<SharedString>> = data.iter().map(new_model_shared_string_slice).collect();
+fn new_model_shared_string_slices(data: &[Vec<String>]) -> ModelRc<ModelRc<SharedString>> {
+    let arr: Vec<ModelRc<SharedString>> = data
+        .iter()
+        .map(|item| new_model_shared_string_slice(item))
+        .collect();
     ModelRc::from(Rc::new(VecModel::from(arr)))
 }
 
@@ -75,8 +77,8 @@ fn load_images(dir: &str) -> Result<Vec<ImageFile>> {
 // https://github.com/slint-ui/slint/issues/747
 
 fn main() -> Result<()> {
-    let app = Arc::new(AppWindow::new().context(PlatformSnafu {})?);
-    let columns = new_model_shared_string_slice(&vec![
+    let app = Rc::new(AppWindow::new().context(PlatformSnafu {})?);
+    let columns = new_model_shared_string_slice(&[
         "Device".to_string(),
         "Mount Point".to_string(),
         "Total".to_string(),
@@ -88,7 +90,7 @@ fn main() -> Result<()> {
         if let Some(dir) = FileDialog::new().pick_folder() {
             // TODO error 处理
             let image_files = load_images(dir.to_str().unwrap_or_default()).unwrap();
-            let values = image_files.iter().map(|item| item.values()).collect();
+            let values: Vec<Vec<String>> = image_files.iter().map(|item| item.values()).collect();
             ui_clone.set_values(new_model_shared_string_slices(&values));
         }
     });

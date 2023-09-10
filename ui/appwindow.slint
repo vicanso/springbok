@@ -59,42 +59,49 @@ component TableView inherits Rectangle {
             }
         }
         ListView {
-            padding-bottom: 0;
-            for item in values : HorizontalLayout {
+            for item in values : Rectangle { 
+                padding-top: 10px;
                 padding-bottom: 10px;
-                Text {
-                    width: 40px;
-                    text: item[0];
-                }
-                HorizontalLayout{
-                    padding-left: 8px;
-                    Text {
-                        text: item[1];
-                    }
-                }
                 HorizontalLayout {
-                    padding-left: 10px;
+                    padding-bottom: 10px;
                     Text {
-                        width: 70px;
-                        text: item[2];
+                        width: 40px;
+                        text: item[0];
                     }
-                }
-                HorizontalLayout {
-                    padding-left: 10px;
-                    Text {
-                        width: 70px;
-                        text: item[3];
+                    HorizontalLayout{
+                        padding-left: 8px;
+                        Text {
+                            text: item[1];
+                        }
                     }
-                }
-                HorizontalLayout {
-                    padding-left: 10px;
-                    Text {
-                        width: 70px;
-                        text: item[4];
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        Text {
+                            width: 70px;
+                            text: item[2];
+                        }
+                    }
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        Text {
+                            width: 70px;
+                            text: item[3];
+                        }
+                    }
+                    HorizontalLayout {
+                        padding-left: 10px;
+                        Text {
+                            width: 70px;
+                            text: item[4];
+                        }
                     }
                 }
             }
         }
+        // Rectangle {
+        //     background: red;
+        //     height: 1px;
+        // }
         HorizontalLayout {
             Button {
                 width: 40px;
