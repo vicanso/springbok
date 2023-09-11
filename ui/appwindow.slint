@@ -3,6 +3,7 @@ import { Button, VerticalBox, ListView, GridBox, ScrollView, HorizontalBox } fro
 component TableView inherits Rectangle {
     in property <[string]> columns;
     in property <[[string]]> values;
+    in property <bool> processing;
     callback show-open-dialog;
 
     VerticalBox {
@@ -105,8 +106,8 @@ component TableView inherits Rectangle {
         HorizontalLayout {
             Button {
                 width: 40px;
-                text: "+";
-                clicked => { root.show-open-dialog(); }
+                text: processing ? "..." : "+";
+                clicked => { show-open-dialog(); }
             }
         }
     }
@@ -119,9 +120,13 @@ export component AppWindow inherits Window {
     title: @tr("Image Converter");
     in property <[string]> columns;
     in property <[[string]]> values;
+    in property <bool> processing;
+    default-font-size: 13px;
+    default-font-weight: 400;
     TableView {
-        show-open-dialog => { root.show-open-dialog(); }
-        columns: root.columns;
-        values: root.values;
+        show-open-dialog => { show-open-dialog(); }
+        columns: columns;
+        values: values;
+        processing: processing;
     }
 }
