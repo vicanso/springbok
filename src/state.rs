@@ -5,7 +5,7 @@ use once_cell::sync::OnceCell;
 use rfd::FileDialog;
 use slint::{ModelRc, SharedString, VecModel};
 use snafu::{ResultExt, Snafu};
-use std::sync::atomic::{AtomicI8, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicI64, AtomicI8, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::{path::PathBuf, rc::Rc};
 
@@ -54,10 +54,12 @@ struct ImageFile {
     size: AtomicU64,
     // 节约空间
     saving: AtomicI8,
+    // 对比区别
+    diff: AtomicI64,
 }
 
 impl ImageFile {
-    fn values(&self) -> Vec<String> {
+    fn values(&self, index: usize) -> Vec<String> {
         let size = self.size.load(Ordering::Relaxed);
         let status = self.status.load(Ordering::Relaxed);
         let status_str = match status {
@@ -70,12 +72,20 @@ impl ImageFile {
         } else {
             "".to_string()
         };
+        let index_str = if index % 2 == 0 { "even" } else { "odd" };
+        let diff = self.diff.load(Ordering::Relaxed);
+        let diff_str = if diff < 0 {
+            "".to_string()
+        } else {
+            format!("{:.5}", diff as f64 / TEN_THOUSANDS)
+        };
         vec![
+            index_str.to_string(),
             status_str.to_string(),
             self.name.clone(),
             ByteSize(size).to_string(),
             saving,
-            "0.01".to_string(),
+            diff_str,
         ]
     }
 }
@@ -105,6 +115,7 @@ fn load_images(dir: &str, formats: &[String]) -> Result<Vec<ImageFile>> {
                     file,
                     size: AtomicU64::new(metadata.len()),
                     saving: AtomicI8::new(0),
+                    diff: AtomicI64::new(-1),
                 });
             }
             image_files.push(ImageFile {
@@ -118,18 +129,21 @@ fn load_images(dir: &str, formats: &[String]) -> Result<Vec<ImageFile>> {
                 file: entry,
                 size: AtomicU64::new(metadata.len()),
                 saving: AtomicI8::new(0),
+                diff: AtomicI64::new(-1),
             });
         }
     }
     Ok(image_files)
 }
 
+static TEN_THOUSANDS: f64 = 10000.0;
+
 fn optim_image(file: &ImageFile) -> Result<(), image_processing::ImageError> {
     let quality = 80;
     let img = load(&file.original)?;
     let size = file.size.load(Ordering::Relaxed);
-    let buf = if file.name.ends_with(".avif") {
-        img.to_avif(quality, 3)
+    let (buf, diff) = if file.name.ends_with(".avif") {
+        img.to_avif(quality, 1)
     } else if file.name.ends_with(".webp") {
         img.to_webp(quality)
     } else if file.name.ends_with(".png") {
@@ -149,6 +163,8 @@ fn optim_image(file: &ImageFile) -> Result<(), image_processing::ImageError> {
     if saving == 0 && file.original == file.file {
         return Ok(());
     }
+    let v = diff * TEN_THOUSANDS;
+    file.diff.store(v as i64, Ordering::Relaxed);
     image_processing::save_file(&file.file, &buf)?;
     Ok(())
 }
@@ -187,7 +203,12 @@ impl State {
         self.image_files.len()
     }
     pub fn get_values(&self) -> ModelRc<ModelRc<SharedString>> {
-        let values: Vec<Vec<String>> = self.image_files.iter().map(|item| item.values()).collect();
+        let values: Vec<Vec<String>> = self
+            .image_files
+            .iter()
+            .enumerate()
+            .map(|(index, item)| item.values(index))
+            .collect();
         new_model_shared_string_slices(&values)
     }
     pub fn select_files(&mut self) -> Result<bool> {

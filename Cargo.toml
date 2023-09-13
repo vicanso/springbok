@@ -22,6 +22,11 @@ lodepng = "3.7.2"
 avif-decode = "0.2.2"
 mozjpeg = "0.10.1"
 dssim = "3.2.4"
+substring = "1.4.5"
 
 [build-dependencies]
 slint-build = "1.2.0"
+
+[profile.release]
+codegen-units = 1
+lto = true

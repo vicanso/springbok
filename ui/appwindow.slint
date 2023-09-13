@@ -4,6 +4,8 @@ component TableView inherits Rectangle {
     in property <[string]> columns;
     in property <[[string]]> values;
     in property <bool> processing;
+    in property <string> processing-tips;
+    in property <string> select-btn-text;
     callback show-open-dialog;
 
     VerticalBox {
@@ -31,8 +33,8 @@ component TableView inherits Rectangle {
             }
             HorizontalLayout{
                 width: 80px;
-                padding-left: 10px;
                 Text {
+                    horizontal-alignment: center;
                     text: @tr("Size");
                 }
                 Rectangle {
@@ -41,9 +43,9 @@ component TableView inherits Rectangle {
                 }
             }
             HorizontalLayout{
-                padding-left: 10px;
                 width: 80px;
                 Text {
+                    horizontal-alignment: center;
                     text: @tr("Savings");
                 }
                 Rectangle {
@@ -52,62 +54,66 @@ component TableView inherits Rectangle {
                 }
             }
             HorizontalLayout{
-                width: 80px;
-                padding-left: 10px;
+                width: 70px;
                 Text {
+                    horizontal-alignment: center;
                     text: @tr("Dssim");
                 }
             }
         }
         ListView {
             for item in values : Rectangle { 
-                padding-top: 10px;
-                padding-bottom: 10px;
+                background: item[0] == "even" ? root.background.brighter(30%) : root.background;
                 HorizontalLayout {
-                    padding-bottom: 10px;
+                    padding-bottom: 8px;
+                    padding-top: 8px;
                     Text {
                         width: 40px;
-                        text: item[0];
+                        horizontal-alignment: center;
+                        text: item[1];
                     }
                     HorizontalLayout{
                         padding-left: 8px;
                         Text {
-                            text: item[1];
-                        }
-                    }
-                    HorizontalLayout {
-                        padding-left: 10px;
-                        Text {
-                            width: 70px;
                             text: item[2];
                         }
                     }
                     HorizontalLayout {
-                        padding-left: 10px;
                         Text {
-                            width: 70px;
+                            horizontal-alignment: center;
+                            width: 80px;
                             text: item[3];
                         }
                     }
                     HorizontalLayout {
-                        padding-left: 10px;
                         Text {
-                            width: 70px;
+                            horizontal-alignment: center;
+                            width: 80px;
                             text: item[4];
+                        }
+                    }
+                    HorizontalLayout {
+                        Text {
+                            horizontal-alignment: center;
+                            width: 70px;
+                            text: item[5];
                         }
                     }
                 }
             }
         }
-        // Rectangle {
-        //     background: red;
-        //     height: 1px;
-        // }
         HorizontalLayout {
             Button {
                 width: 40px;
-                text: processing ? "..." : "+";
+                text: processing ? select-btn-text : "+";
                 clicked => { show-open-dialog(); }
+            }
+            HorizontalLayout {
+                padding-left: 15px;
+            Text {
+                vertical-alignment: center;
+                text: "Select folder of images" + processing-tips;
+            }
             }
         }
     }
@@ -121,12 +127,17 @@ export component AppWindow inherits Window {
     in property <[string]> columns;
     in property <[[string]]> values;
     in property <bool> processing;
+    in property <string> processing-tips;
+    in property <string> select-btn-text;
     default-font-size: 13px;
-    default-font-weight: 400;
+    default-font-weight: 500;
     TableView {
         show-open-dialog => { show-open-dialog(); }
         columns: columns;
         values: values;
         processing: processing;
+        background: root.background;
+        processing-tips: processing-tips;
+        select-btn-text: select-btn-text;
     }
 }

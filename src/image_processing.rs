@@ -1,8 +1,10 @@
+use avif_decode::Decoder;
+use dssim::Dssim;
 use image::codecs::avif;
 use image::codecs::webp;
-use image::{ImageEncoder, ImageFormat, RgbaImage};
+use image::{DynamicImage, ImageEncoder, ImageFormat, RgbaImage};
 use lodepng::Bitmap;
-use rgb::{ComponentBytes, RGB8, RGBA8};
+use rgb::{ComponentBytes, FromSlice, RGBA8};
 use snafu::{ResultExt, Snafu};
 use std::io::{Cursor, Read};
 use std::{fs, fs::File, path::PathBuf};
@@ -96,21 +98,88 @@ pub fn load(path: &PathBuf) -> Result<ImageInfo> {
     let img = result.to_rgba8();
     Ok(img.into())
 }
+pub fn avif_decode(data: &[u8]) -> Result<DynamicImage> {
+    let avif_result = Decoder::from_avif(data)
+        .context(AvifDecodeSnafu {
+            category: "decode".to_string(),
+        })?
+        .to_image()
+        .context(AvifDecodeSnafu {
+            category: "decode".to_string(),
+        })?;
+    match avif_result {
+        avif_decode::Image::Rgb8(img) => {
+            let width = img.width();
+            let height = img.height();
+            let mut buf = Vec::with_capacity(width * height * 3);
+            for item in img.buf() {
+                buf.push(item.r);
+                buf.push(item.g);
+                buf.push(item.b);
+            }
+            let rgb_image = image::RgbImage::from_raw(width as u32, height as u32, buf)
+                .ok_or(ImageError::Unknown)?;
+            Ok(DynamicImage::ImageRgb8(rgb_image))
+        }
+        avif_decode::Image::Rgba8(img) => {
+            let width = img.width();
+            let height = img.height();
+            let mut buf = Vec::with_capacity(width * height * 4);
+            for item in img.buf() {
+                buf.push(item.r);
+                buf.push(item.g);
+                buf.push(item.b);
+                buf.push(item.a);
+            }
+            let rgba_image = image::RgbaImage::from_raw(width as u32, height as u32, buf)
+                .ok_or(ImageError::Unknown)?;
+            Ok(DynamicImage::ImageRgba8(rgba_image))
+        }
+        avif_decode::Image::Rgba16(img) => {
+            let width = img.width();
+            let height = img.height();
+            let mut buf = Vec::with_capacity(width * height * 4);
+            for item in img.buf() {
+                buf.push((item.r / 257) as u8);
+                buf.push((item.g / 257) as u8);
+                buf.push((item.b / 257) as u8);
+                buf.push((item.a / 257) as u8);
+            }
+            let rgba_image = image::RgbaImage::from_raw(width as u32, height as u32, buf)
+                .ok_or(ImageError::Unknown)?;
+            Ok(DynamicImage::ImageRgba8(rgba_image))
+        }
+        avif_decode::Image::Rgb16(img) => {
+            let width = img.width();
+            let height = img.height();
+            let mut buf = Vec::with_capacity(width * height * 3);
+            for item in img.buf() {
+                buf.push((item.r / 257) as u8);
+                buf.push((item.g / 257) as u8);
+                buf.push((item.b / 257) as u8);
+            }
+            let rgb_image = image::RgbImage::from_raw(width as u32, height as u32, buf)
+                .ok_or(ImageError::Unknown)?;
+            Ok(DynamicImage::ImageRgb8(rgb_image))
+        }
+        _ => Err(ImageError::Unknown),
+    }
+}
 
 impl ImageInfo {
-    // 转换获取rgb颜色
-    fn get_rgb8(&self) -> Vec<RGB8> {
-        let mut output_data: Vec<RGB8> = Vec::with_capacity(self.width * self.height);
-
-        let input = self.buffer.clone();
-
-        for ele in input {
-            output_data.push(ele.rgb())
+    fn diff(&self, img: &DynamicImage) -> f64 {
+        let attr = Dssim::new();
+        let gp1 = attr.create_image_rgba(&self.buffer, self.width, self.height);
+        let gp2 =
+            attr.create_image_rgba(img.to_rgba8().as_raw().as_rgba(), self.width, self.height);
+        if gp1.is_none() || gp2.is_none() {
+            return -1.0;
         }
-
-        output_data
+        // 已保证不为空
+        let (diff, _) = attr.compare(&gp1.unwrap(), gp2.unwrap());
+        diff.into()
     }
-    pub fn to_png(&self, quality: u8) -> Result<Vec<u8>> {
+    pub fn to_png(&self, quality: u8) -> Result<(Vec<u8>, f64)> {
         let mut liq = imagequant::new();
         liq.set_quality(0, quality).context(ImageQuantSnafu {
             category: "png_set_quality",
@@ -144,16 +213,21 @@ impl ImageInfo {
                 category: "png_encode",
             })?;
 
-        Ok(buf)
+        let c = Cursor::new(&buf);
+        let format = ImageFormat::from_extension("png");
+        let img = image::load(c, format.unwrap()).context(ImageSnafu { category: "load" })?;
+        let diff = self.diff(&img);
+
+        Ok((buf, diff))
     }
-    pub fn to_webp(&self, quality: u8) -> Result<Vec<u8>> {
-        let mut w = Vec::new();
+    pub fn to_webp(&self, quality: u8) -> Result<(Vec<u8>, f64)> {
+        let mut buf = Vec::new();
 
         let q = match quality {
             100 => webp::WebPQuality::lossless(),
             _ => webp::WebPQuality::lossy(quality),
         };
-        let img = webp::WebPEncoder::new_with_quality(&mut w, q);
+        let img = webp::WebPEncoder::new_with_quality(&mut buf, q);
 
         img.encode(
             self.buffer.as_bytes(),
@@ -165,16 +239,21 @@ impl ImageInfo {
             category: "webp_encode",
         })?;
 
-        Ok(w)
+        let c = Cursor::new(&buf);
+        let format = ImageFormat::from_extension("webp");
+        let img = image::load(c, format.unwrap()).context(ImageSnafu { category: "load" })?;
+        let diff = self.diff(&img);
+
+        Ok((buf, diff))
     }
-    pub fn to_avif(&self, quality: u8, speed: u8) -> Result<Vec<u8>> {
-        let mut w = Vec::new();
+    pub fn to_avif(&self, quality: u8, speed: u8) -> Result<(Vec<u8>, f64)> {
+        let mut buf = Vec::new();
         let mut sp = speed;
         if sp == 0 {
             sp = 3;
         }
 
-        let img = avif::AvifEncoder::new_with_speed_quality(&mut w, sp, quality);
+        let img = avif::AvifEncoder::new_with_speed_quality(&mut buf, sp, quality);
         img.write_image(
             self.buffer.as_bytes(),
             self.width as u32,
@@ -185,17 +264,25 @@ impl ImageInfo {
             category: "avif_encode",
         })?;
 
-        Ok(w)
+        let img = avif_decode(&buf)?;
+        let diff = self.diff(&img);
+
+        Ok((buf, diff))
     }
-    pub fn to_mozjpeg(&self, quality: u8) -> Result<Vec<u8>> {
+    pub fn to_mozjpeg(&self, quality: u8) -> Result<(Vec<u8>, f64)> {
         let mut comp = mozjpeg::Compress::new(mozjpeg::ColorSpace::JCS_RGB);
         comp.set_size(self.width, self.height);
         comp.set_quality(quality as f32);
         let mut comp = comp.start_compress(Vec::new()).context(IoSnafu {})?;
         let pixels = vec![0u8; self.width * self.height * 3];
         comp.write_scanlines(&pixels[..]).context(IoSnafu {})?;
-        let data = comp.finish().context(IoSnafu {})?;
-        Ok(data)
+        let buf = comp.finish().context(IoSnafu {})?;
+        let c = Cursor::new(&buf);
+        let format = ImageFormat::from_extension("jpeg");
+        let img = image::load(c, format.unwrap()).context(ImageSnafu { category: "load" })?;
+        let diff = self.diff(&img);
+
+        Ok((buf, diff))
     }
 }
 

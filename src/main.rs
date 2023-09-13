@@ -1,7 +1,9 @@
 use crossbeam_channel::{select, tick, unbounded};
 use slint::ComponentHandle;
+use slint::SharedString;
 use snafu::{ResultExt, Snafu};
 use std::time::Duration;
+use substring::Substring;
 
 slint::include_modules!();
 
@@ -29,16 +31,30 @@ fn main() -> Result<()> {
     let app_image_list = app.as_weak();
     std::thread::spawn(move || {
         let ticker = tick(Duration::from_millis(500));
+        let mut dot_count: usize = 0;
+
         loop {
             select! {
-              recv(ticker) -> _ => {},
+              recv(ticker) -> _ => {
+                dot_count += 1;
+                app_image_list.upgrade_in_event_loop(move |h| {
+                    let size = dot_count % 3;
+                    h.set_select_btn_text(SharedString::from("...".substring(0, size + 1)));
+                }).unwrap();
+              },
               recv(update_receiver) -> result => {
                 // TODO error的处理
                 let count = result.unwrap_or_default();
+                if count == 0 {
+                    dot_count = 0;
+                }
                 app_image_list.upgrade_in_event_loop(move |h| {
                     let mut state = state::lock().unwrap();
                     h.set_values(state.get_values());
-                    if state.count() == count as usize {
+                    let total = state.count();
+                    let tips = format!(" ({count}/{total})");
+                    h.set_processing_tips(SharedString::from(tips));
+                    if total == count as usize {
                         state.processing = false;
                         h.set_processing(state.processing);
                     }
@@ -57,6 +73,7 @@ fn main() -> Result<()> {
             let processing = state.processing;
             app_show_open_dialog
                 .upgrade_in_event_loop(move |h| {
+                    h.set_select_btn_text(SharedString::from("..."));
                     h.set_processing(processing);
                 })
                 .unwrap();
