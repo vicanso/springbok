@@ -161,6 +161,7 @@ fn optim_image(file: &ImageFile) -> Result<(), image_processing::ImageError> {
     file.saving.store(saving as i8, Ordering::Relaxed);
     // 如果是原文件，而且压缩效果无用
     if saving == 0 && file.original == file.file {
+        file.diff.store(0, Ordering::Relaxed);
         return Ok(());
     }
     let v = diff * TEN_THOUSANDS;
@@ -182,6 +183,9 @@ fn optim_images(s: Sender<i64>, image_files: Arc<Vec<ImageFile>>) {
     }
 }
 
+static AVIF: &str = "avif";
+static WEBP: &str = "webp";
+
 pub struct State {
     pub processing: bool,
     pub dir: String,
@@ -201,6 +205,26 @@ impl State {
     }
     pub fn count(&self) -> usize {
         self.image_files.len()
+    }
+    fn toggle_support_format(&mut self, support_format: String) {
+        let mut found = None;
+        for (index, item) in self.support_formats.iter().enumerate() {
+            if *item == support_format {
+                found = Some(index);
+                break;
+            }
+        }
+        if let Some(index) = found {
+            self.support_formats.remove(index);
+        } else {
+            self.support_formats.push(support_format);
+        }
+    }
+    pub fn toggle_avif(&mut self) {
+        self.toggle_support_format(AVIF.to_string())
+    }
+    pub fn toggle_webp(&mut self) {
+        self.toggle_support_format(WEBP.to_string())
     }
     pub fn get_values(&self) -> ModelRc<ModelRc<SharedString>> {
         let values: Vec<Vec<String>> = self
@@ -252,7 +276,7 @@ pub fn must_new_state(update_sender: Sender<i64>) -> &'static Mutex<State> {
             processing: false,
             dir: "".to_string(),
             image_files: Arc::new(vec![]),
-            support_formats: vec!["avif".to_string(), "webp".to_string()],
+            support_formats: vec![AVIF.to_string(), WEBP.to_string()],
             update_sender,
         })
     })

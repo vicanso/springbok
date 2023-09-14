@@ -64,10 +64,19 @@ fn main() -> Result<()> {
             }
         }
     });
-    // let ui_show_open_dialog = app.clone();
+    app.on_toggle_support_avif(|| {
+        // TODO error 处理
+        let mut state = state::lock().unwrap();
+        state.toggle_avif();
+    });
+    app.on_toggle_support_webp(|| {
+        // TODO error 处理
+        let mut state = state::lock().unwrap();
+        state.toggle_webp();
+    });
+
     let app_show_open_dialog = app.as_weak();
     app.on_show_open_dialog(move || {
-        // TODO error 处理
         let mut state = state::lock().unwrap();
         if state.select_files().unwrap() {
             let processing = state.processing;

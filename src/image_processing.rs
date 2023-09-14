@@ -4,7 +4,7 @@ use image::codecs::avif;
 use image::codecs::webp;
 use image::{DynamicImage, ImageEncoder, ImageFormat, RgbaImage};
 use lodepng::Bitmap;
-use rgb::{ComponentBytes, FromSlice, RGBA8};
+use rgb::{ComponentBytes, FromSlice, RGBA8, RGB8};
 use snafu::{ResultExt, Snafu};
 use std::io::{Cursor, Read};
 use std::{fs, fs::File, path::PathBuf};
@@ -167,6 +167,18 @@ pub fn avif_decode(data: &[u8]) -> Result<DynamicImage> {
 }
 
 impl ImageInfo {
+    // 转换获取rgb颜色
+    fn get_rgb8(&self) -> Vec<RGB8> {
+        let mut output_data: Vec<RGB8> = Vec::with_capacity(self.width * self.height);
+
+        let input = self.buffer.clone();
+
+        for ele in input {
+            output_data.push(ele.rgb())
+        }
+
+        output_data
+    }
     fn diff(&self, img: &DynamicImage) -> f64 {
         let attr = Dssim::new();
         let gp1 = attr.create_image_rgba(&self.buffer, self.width, self.height);
@@ -274,8 +286,8 @@ impl ImageInfo {
         comp.set_size(self.width, self.height);
         comp.set_quality(quality as f32);
         let mut comp = comp.start_compress(Vec::new()).context(IoSnafu {})?;
-        let pixels = vec![0u8; self.width * self.height * 3];
-        comp.write_scanlines(&pixels[..]).context(IoSnafu {})?;
+        comp.write_scanlines(self.get_rgb8().as_bytes())
+            .context(IoSnafu {})?;
         let buf = comp.finish().context(IoSnafu {})?;
         let c = Cursor::new(&buf);
         let format = ImageFormat::from_extension("jpeg");

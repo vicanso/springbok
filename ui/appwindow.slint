@@ -1,4 +1,4 @@
-import { Button, VerticalBox, ListView, GridBox, ScrollView, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, ListView, GridBox, ScrollView, HorizontalBox , CheckBox, ComboBox} from "std-widgets.slint";
 
 component TableView inherits Rectangle {
     in property <[string]> columns;
@@ -6,7 +6,10 @@ component TableView inherits Rectangle {
     in property <bool> processing;
     in property <string> processing-tips;
     in property <string> select-btn-text;
+    in-out property <bool> support-avif;
     callback show-open-dialog;
+    callback toggle-support-webp;
+    callback toggle-support-avif;
 
     VerticalBox {
         HorizontalLayout {
@@ -54,7 +57,9 @@ component TableView inherits Rectangle {
                 }
             }
             HorizontalLayout{
-                width: 70px;
+                width: 90px;
+                // listview 存在滚动条
+                padding-right: 15px;
                 Text {
                     horizontal-alignment: center;
                     text: @tr("Dssim");
@@ -79,23 +84,23 @@ component TableView inherits Rectangle {
                         }
                     }
                     HorizontalLayout {
+                        width: 80px;
                         Text {
                             horizontal-alignment: center;
-                            width: 80px;
                             text: item[3];
                         }
                     }
                     HorizontalLayout {
+                        width: 80px;
                         Text {
                             horizontal-alignment: center;
-                            width: 80px;
                             text: item[4];
                         }
                     }
                     HorizontalLayout {
+                        width: 70px;
                         Text {
                             horizontal-alignment: center;
-                            width: 70px;
                             text: item[5];
                         }
                     }
@@ -104,16 +109,37 @@ component TableView inherits Rectangle {
         }
         HorizontalLayout {
             Button {
-                width: 40px;
+                width: 60px;
                 text: processing ? select-btn-text : "+";
                 clicked => { show-open-dialog(); }
             }
             HorizontalLayout {
                 padding-left: 15px;
-            Text {
-                vertical-alignment: center;
-                text: "Select folder of images" + processing-tips;
+                Text {
+                    vertical-alignment: center;
+                    text: "Select folder of images" + processing-tips;
+                }
             }
+            HorizontalLayout {
+                CheckBox {
+                    width: 80px;
+                    text: "WebP";
+                    checked: true;
+                    toggled => {
+                        toggle-support-webp();
+                    }
+                }
+            }
+            HorizontalLayout {
+                padding-left: 20px;
+                CheckBox {
+                    width: 80px;
+                    text: "AVIF";
+                    checked: true;
+                    toggled => {
+                        toggle-support-avif();
+                    }
+                }
             }
         }
     }
@@ -123,6 +149,8 @@ export component AppWindow inherits Window {
     preferred-width: 700px;
     preferred-height: 500px;
     callback show-open-dialog;
+    callback toggle-support-webp;
+    callback toggle-support-avif;
     title: @tr("Image Converter");
     in property <[string]> columns;
     in property <[[string]]> values;
@@ -133,6 +161,8 @@ export component AppWindow inherits Window {
     default-font-weight: 500;
     TableView {
         show-open-dialog => { show-open-dialog(); }
+        toggle-support-avif => { toggle-support-avif(); }
+        toggle-support-webp => { toggle-support-webp(); }
         columns: columns;
         values: values;
         processing: processing;
