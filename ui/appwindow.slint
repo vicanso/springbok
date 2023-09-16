@@ -1,4 +1,11 @@
-import { Button, VerticalBox, ListView, GridBox, ScrollView, HorizontalBox , CheckBox, ComboBox} from "std-widgets.slint";
+import { Button, VerticalBox, ListView, HorizontalBox, CheckBox, SpinBox } from "std-widgets.slint";
+
+export global Config  {
+    in-out property<int> webp-quality: 80;
+    in-out property <bool> support-webp: true;
+    in-out property<int> avif-quality: 70;
+    in-out property <bool> support-avif: true;
+}
 
 component TableView inherits Rectangle {
     in property <[string]> columns;
@@ -6,9 +13,7 @@ component TableView inherits Rectangle {
     in property <bool> processing;
     in property <string> processing-tips;
     in property <string> select-btn-text;
-    in-out property <bool> support-avif;
     callback show-open-dialog;
-    callback toggle-support-webp;
     callback toggle-support-avif;
 
     VerticalBox {
@@ -124,10 +129,18 @@ component TableView inherits Rectangle {
                 CheckBox {
                     width: 80px;
                     text: "WebP";
-                    checked: true;
+                    checked: Config.support-webp;
                     toggled => {
-                        toggle-support-webp();
+                        Config.support-webp = self.checked;
                     }
+                }
+                SpinBox { 
+                    enabled: Config.support-webp;
+                    value: Config.webp-quality;
+                    edited => {
+                        Config.webp-quality = self.value;
+                    }
+                    width: 100px;
                 }
             }
             HorizontalLayout {
@@ -135,10 +148,18 @@ component TableView inherits Rectangle {
                 CheckBox {
                     width: 80px;
                     text: "AVIF";
-                    checked: true;
+                    checked: Config.support-avif;
                     toggled => {
-                        toggle-support-avif();
+                        Config.support-avif = self.checked;
                     }
+                }
+                SpinBox { 
+                    enabled: Config.support-avif;
+                    value: Config.avif-quality;
+                    edited => {
+                        Config.avif-quality = self.value;
+                    }
+                    width: 100px;
                 }
             }
         }
@@ -149,7 +170,6 @@ export component AppWindow inherits Window {
     preferred-width: 700px;
     preferred-height: 500px;
     callback show-open-dialog;
-    callback toggle-support-webp;
     callback toggle-support-avif;
     title: @tr("Image Converter");
     in property <[string]> columns;
@@ -161,8 +181,6 @@ export component AppWindow inherits Window {
     default-font-weight: 500;
     TableView {
         show-open-dialog => { show-open-dialog(); }
-        toggle-support-avif => { toggle-support-avif(); }
-        toggle-support-webp => { toggle-support-webp(); }
         columns: columns;
         values: values;
         processing: processing;

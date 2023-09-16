@@ -4,7 +4,7 @@ use image::codecs::avif;
 use image::codecs::webp;
 use image::{DynamicImage, ImageEncoder, ImageFormat, RgbaImage};
 use lodepng::Bitmap;
-use rgb::{ComponentBytes, FromSlice, RGBA8, RGB8};
+use rgb::{ComponentBytes, FromSlice, RGB8, RGBA8};
 use snafu::{ResultExt, Snafu};
 use std::io::{Cursor, Read};
 use std::{fs, fs::File, path::PathBuf};

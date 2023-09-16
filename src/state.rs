@@ -138,14 +138,20 @@ fn load_images(dir: &str, formats: &[String]) -> Result<Vec<ImageFile>> {
 
 static TEN_THOUSANDS: f64 = 10000.0;
 
-fn optim_image(file: &ImageFile) -> Result<(), image_processing::ImageError> {
+struct OptimParams {
+    avif: u8,
+    webp: u8,
+}
+
+fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_processing::ImageError> {
+    // TODO 各图片的质量选择
     let quality = 80;
     let img = load(&file.original)?;
     let size = file.size.load(Ordering::Relaxed);
     let (buf, diff) = if file.name.ends_with(".avif") {
-        img.to_avif(quality, 1)
+        img.to_avif(params.avif, 1)
     } else if file.name.ends_with(".webp") {
-        img.to_webp(quality)
+        img.to_webp(params.webp)
     } else if file.name.ends_with(".png") {
         img.to_png(quality)
     } else {
@@ -170,10 +176,10 @@ fn optim_image(file: &ImageFile) -> Result<(), image_processing::ImageError> {
     Ok(())
 }
 
-fn optim_images(s: Sender<i64>, image_files: Arc<Vec<ImageFile>>) {
+fn optim_images(s: Sender<i64>, image_files: Arc<Vec<ImageFile>>, params: &OptimParams) {
     for (index, file) in image_files.iter().enumerate() {
         let count = index as i64 + 1;
-        if let Ok(()) = optim_image(file) {
+        if let Ok(()) = optim_image(file, params) {
             file.status.store(STATUS_DONE, Ordering::Relaxed);
         } else {
             file.status.store(STATUS_FAIL, Ordering::Relaxed);
@@ -189,7 +195,8 @@ static WEBP: &str = "webp";
 pub struct State {
     pub processing: bool,
     pub dir: String,
-    pub support_formats: Vec<String>,
+    pub avif_quality: u8,
+    pub webp_quality: u8,
     image_files: Arc<Vec<ImageFile>>,
     update_sender: Sender<i64>,
 }
@@ -205,26 +212,6 @@ impl State {
     }
     pub fn count(&self) -> usize {
         self.image_files.len()
-    }
-    fn toggle_support_format(&mut self, support_format: String) {
-        let mut found = None;
-        for (index, item) in self.support_formats.iter().enumerate() {
-            if *item == support_format {
-                found = Some(index);
-                break;
-            }
-        }
-        if let Some(index) = found {
-            self.support_formats.remove(index);
-        } else {
-            self.support_formats.push(support_format);
-        }
-    }
-    pub fn toggle_avif(&mut self) {
-        self.toggle_support_format(AVIF.to_string())
-    }
-    pub fn toggle_webp(&mut self) {
-        self.toggle_support_format(WEBP.to_string())
     }
     pub fn get_values(&self) -> ModelRc<ModelRc<SharedString>> {
         let values: Vec<Vec<String>> = self
@@ -247,7 +234,14 @@ impl State {
         let dir = folder.unwrap().to_str().unwrap_or_default().to_string();
         self.processing = true;
         self.dir = dir;
-        match load_images(&self.dir, &self.support_formats) {
+        let mut support_formats = vec![];
+        if self.avif_quality > 0 {
+            support_formats.push(AVIF.to_string());
+        }
+        if self.webp_quality > 0 {
+            support_formats.push(WEBP.to_string());
+        }
+        match load_images(&self.dir, &support_formats) {
             Ok(image_files) => {
                 self.image_files = Arc::new(image_files);
                 // TODO 处理error
@@ -255,8 +249,17 @@ impl State {
                 let s = self.update_sender.clone();
                 let image_files = self.image_files.clone();
                 // 启动子进程处理
+                let avif_quality = self.avif_quality;
+                let webp_quality = self.webp_quality;
                 std::thread::spawn(move || {
-                    optim_images(s, image_files);
+                    optim_images(
+                        s,
+                        image_files,
+                        &OptimParams {
+                            avif: avif_quality,
+                            webp: webp_quality,
+                        },
+                    );
                 });
             }
             Err(err) => {
@@ -276,7 +279,8 @@ pub fn must_new_state(update_sender: Sender<i64>) -> &'static Mutex<State> {
             processing: false,
             dir: "".to_string(),
             image_files: Arc::new(vec![]),
-            support_formats: vec![AVIF.to_string(), WEBP.to_string()],
+            avif_quality: 70,
+            webp_quality: 80,
             update_sender,
         })
     })

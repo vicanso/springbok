@@ -28,6 +28,8 @@ fn main() -> Result<()> {
 
     state::must_new_state(update_sender);
 
+    // app.set_webp_quality(80);
+
     let app_image_list = app.as_weak();
     std::thread::spawn(move || {
         let ticker = tick(Duration::from_millis(500));
@@ -64,21 +66,34 @@ fn main() -> Result<()> {
             }
         }
     });
-    app.on_toggle_support_avif(|| {
-        // TODO error 处理
-        let mut state = state::lock().unwrap();
-        state.toggle_avif();
-    });
-    app.on_toggle_support_webp(|| {
-        // TODO error 处理
-        let mut state = state::lock().unwrap();
-        state.toggle_webp();
-    });
+    // app.on_toggle_support_avif(|| {
+    //     // TODO error 处理
+    //     let mut state = state::lock().unwrap();
+    //     state.toggle_avif();
+    // });
+    // app.on_toggle_support_webp(|| {
+    //     // TODO error 处理
+    //     let mut state = state::lock().unwrap();
+    //     state.toggle_webp();
+    // });
 
     let app_show_open_dialog = app.as_weak();
     app.on_show_open_dialog(move || {
         let mut state = state::lock().unwrap();
         if state.select_files().unwrap() {
+            if let Some(app) = app_show_open_dialog.upgrade() {
+                let config = app.global::<Config>();
+                if config.get_support_avif() {
+                    state.avif_quality = config.get_avif_quality() as u8;
+                } else {
+                    state.avif_quality = 0;
+                }
+                if config.get_support_webp() {
+                    state.webp_quality = config.get_webp_quality() as u8;
+                } else {
+                    state.webp_quality = 0;
+                }
+            }
             let processing = state.processing;
             app_show_open_dialog
                 .upgrade_in_event_loop(move |h| {
