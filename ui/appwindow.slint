@@ -62,7 +62,7 @@ component TableView inherits Rectangle {
                 }
             }
             HorizontalLayout{
-                width: 90px;
+                width: 80px;
                 // listview 存在滚动条
                 padding-right: 15px;
                 Text {
@@ -103,7 +103,7 @@ component TableView inherits Rectangle {
                         }
                     }
                     HorizontalLayout {
-                        width: 70px;
+                        width: 80px;
                         Text {
                             horizontal-alignment: center;
                             text: item[5];
@@ -167,8 +167,8 @@ component TableView inherits Rectangle {
 }
 
 export component AppWindow inherits Window {
-    preferred-width: 700px;
-    preferred-height: 500px;
+    preferred-width: 800px;
+    preferred-height: 600px;
     callback show-open-dialog;
     callback toggle-support-avif;
     title: @tr("Image Converter");

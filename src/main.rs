@@ -80,20 +80,20 @@ fn main() -> Result<()> {
     let app_show_open_dialog = app.as_weak();
     app.on_show_open_dialog(move || {
         let mut state = state::lock().unwrap();
-        if state.select_files().unwrap() {
-            if let Some(app) = app_show_open_dialog.upgrade() {
-                let config = app.global::<Config>();
-                if config.get_support_avif() {
-                    state.avif_quality = config.get_avif_quality() as u8;
-                } else {
-                    state.avif_quality = 0;
-                }
-                if config.get_support_webp() {
-                    state.webp_quality = config.get_webp_quality() as u8;
-                } else {
-                    state.webp_quality = 0;
-                }
+        if let Some(app) = app_show_open_dialog.upgrade() {
+            let config = app.global::<Config>();
+            if config.get_support_avif() {
+                state.avif_quality = config.get_avif_quality() as u8;
+            } else {
+                state.avif_quality = 0;
             }
+            if config.get_support_webp() {
+                state.webp_quality = config.get_webp_quality() as u8;
+            } else {
+                state.webp_quality = 0;
+            }
+        }
+        if state.select_files().unwrap() {
             let processing = state.processing;
             app_show_open_dialog
                 .upgrade_in_event_loop(move |h| {

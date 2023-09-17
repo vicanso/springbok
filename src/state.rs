@@ -38,7 +38,8 @@ fn new_model_shared_string_slices(data: &[Vec<String>]) -> ModelRc<ModelRc<Share
 }
 
 static STATUS_PENDING: i8 = 0;
-static STATUS_DONE: i8 = 1;
+static STATUS_PROCESSING: i8 = 1;
+static STATUS_DONE: i8 = 2;
 static STATUS_FAIL: i8 = -1;
 
 struct ImageFile {
@@ -63,7 +64,8 @@ impl ImageFile {
         let size = self.size.load(Ordering::Relaxed);
         let status = self.status.load(Ordering::Relaxed);
         let status_str = match status {
-            0 => "...",
+            0 => "",
+            1 => "...",
             -1 => "Fail",
             _ => "Done",
         };
@@ -158,13 +160,13 @@ fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_proce
         img.to_mozjpeg(quality)
     }?;
     let current_size = buf.len() as u64;
-    let saving = if current_size > size {
-        0
+    let saving:i8 = if current_size > size {
+        -(((current_size - size) * 100 / size) as i8)
     } else {
-        100 - current_size * 100 / size
+        (100 - current_size * 100 / size) as i8
     };
     file.size.store(current_size, Ordering::Relaxed);
-    file.saving.store(saving as i8, Ordering::Relaxed);
+    file.saving.store(saving, Ordering::Relaxed);
     // 如果是原文件，而且压缩效果无用
     if saving == 0 && file.original == file.file {
         file.diff.store(0, Ordering::Relaxed);
@@ -179,6 +181,7 @@ fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_proce
 fn optim_images(s: Sender<i64>, image_files: Arc<Vec<ImageFile>>, params: &OptimParams) {
     for (index, file) in image_files.iter().enumerate() {
         let count = index as i64 + 1;
+        file.status.store(STATUS_PROCESSING, Ordering::Relaxed);
         if let Ok(()) = optim_image(file, params) {
             file.status.store(STATUS_DONE, Ordering::Relaxed);
         } else {
