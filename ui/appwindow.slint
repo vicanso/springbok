@@ -1,10 +1,19 @@
 import { Button, VerticalBox, ListView, HorizontalBox, CheckBox, SpinBox } from "std-widgets.slint";
 
 export global Config  {
-    in-out property<int> webp-quality: 80;
+    in-out property <bool> support-png: true;
+    in-out property <int> png-quality: 0;
+
+    in-out property <bool> support-jpeg: true;
+    in-out property <int> jpeg-quality: 0;
+
     in-out property <bool> support-webp: true;
-    in-out property<int> avif-quality: 70;
+    in-out property <int> webp-quality: 0;
+
     in-out property <bool> support-avif: true;
+    in-out property <int> avif-quality: 0;
+
+    in-out property <string> save_path;
 }
 
 component TableView inherits Rectangle {
@@ -14,7 +23,6 @@ component TableView inherits Rectangle {
     in property <string> processing-tips;
     in property <string> select-btn-text;
     callback show-open-dialog;
-    callback toggle-support-avif;
 
     VerticalBox {
         HorizontalLayout {
@@ -114,18 +122,53 @@ component TableView inherits Rectangle {
         }
         HorizontalLayout {
             Button {
-                width: 60px;
                 text: processing ? select-btn-text : "+";
                 clicked => { show-open-dialog(); }
             }
             HorizontalLayout {
                 padding-left: 15px;
-                Text {
-                    vertical-alignment: center;
-                    text: "Select folder of images" + processing-tips;
+                CheckBox {
+                    width: 80px;
+                    text: "JPEG";
+                    checked: Config.support-jpeg;
+                    toggled => {
+                        Config.support-jpeg = self.checked;
+                    }
+                }
+                SpinBox { 
+                    enabled: Config.support-jpeg;
+                    value: Config.jpeg-quality;
+                    minimum: 60;
+                    maximum: 100;
+                    edited => {
+                        Config.jpeg-quality = self.value;
+                    }
+                    width: 90px;
                 }
             }
             HorizontalLayout {
+                padding-left: 15px;
+                CheckBox {
+                    width: 75px;
+                    text: "PNG";
+                    checked: Config.support-png;
+                    toggled => {
+                        Config.support-png = self.checked;
+                    }
+                }
+                SpinBox { 
+                    enabled: Config.support-png;
+                    value: Config.png-quality;
+                    minimum: 60;
+                    maximum: 100;
+                    edited => {
+                        Config.png-quality = self.value;
+                    }
+                    width: 90px;
+                }
+            }
+            HorizontalLayout {
+                padding-left: 15px;
                 CheckBox {
                     width: 80px;
                     text: "WebP";
@@ -137,16 +180,18 @@ component TableView inherits Rectangle {
                 SpinBox { 
                     enabled: Config.support-webp;
                     value: Config.webp-quality;
+                    minimum: 60;
+                    maximum: 100;
                     edited => {
                         Config.webp-quality = self.value;
                     }
-                    width: 100px;
+                    width: 90px;
                 }
             }
             HorizontalLayout {
-                padding-left: 20px;
+                padding-left: 15px;
                 CheckBox {
-                    width: 80px;
+                    width: 75px;
                     text: "AVIF";
                     checked: Config.support-avif;
                     toggled => {
@@ -156,10 +201,12 @@ component TableView inherits Rectangle {
                 SpinBox { 
                     enabled: Config.support-avif;
                     value: Config.avif-quality;
+                    minimum: 60;
+                    maximum: 100;
                     edited => {
                         Config.avif-quality = self.value;
                     }
-                    width: 100px;
+                    width: 90px;
                 }
             }
         }
@@ -167,10 +214,9 @@ component TableView inherits Rectangle {
 }
 
 export component AppWindow inherits Window {
-    preferred-width: 800px;
+    preferred-width: 818px;
     preferred-height: 600px;
     callback show-open-dialog;
-    callback toggle-support-avif;
     title: @tr("Image Converter");
     in property <[string]> columns;
     in property <[[string]]> values;

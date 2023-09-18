@@ -92,8 +92,7 @@ impl ImageFile {
     }
 }
 
-fn load_images(dir: &str, formats: &[String]) -> Result<Vec<ImageFile>> {
-    let ext_list = ["png", "jpeg", "jpg"];
+fn load_images(dir: &str, ext_list: &[String], formats: &[String]) -> Result<Vec<ImageFile>> {
     let mut file_paths = vec![];
     for ext in ext_list.iter() {
         file_paths.push(format!(r#"{dir}/**/*.{ext}"#));
@@ -160,7 +159,7 @@ fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_proce
         img.to_mozjpeg(quality)
     }?;
     let current_size = buf.len() as u64;
-    let saving:i8 = if current_size > size {
+    let saving: i8 = if current_size > size {
         -(((current_size - size) * 100 / size) as i8)
     } else {
         (100 - current_size * 100 / size) as i8
@@ -198,6 +197,8 @@ static WEBP: &str = "webp";
 pub struct State {
     pub processing: bool,
     pub dir: String,
+    pub png_quality: u8,
+    pub jpeg_quality: u8,
     pub avif_quality: u8,
     pub webp_quality: u8,
     image_files: Arc<Vec<ImageFile>>,
@@ -229,7 +230,9 @@ impl State {
         if self.processing {
             return Ok(false);
         }
-        let folder = FileDialog::new().pick_folder();
+        let folder = FileDialog::new()
+            .set_title("Please select the path of images")
+            .pick_folder();
         if folder.is_none() {
             return Ok(false);
         }
@@ -244,7 +247,15 @@ impl State {
         if self.webp_quality > 0 {
             support_formats.push(WEBP.to_string());
         }
-        match load_images(&self.dir, &support_formats) {
+        let mut ext_list = vec![];
+        if self.jpeg_quality > 0 {
+            ext_list.push("jpeg".to_string());
+            ext_list.push("jpg".to_string());
+        }
+        if self.png_quality > 0 {
+            ext_list.push("png".to_string());
+        }
+        match load_images(&self.dir, &ext_list, &support_formats) {
             Ok(image_files) => {
                 self.image_files = Arc::new(image_files);
                 // TODO 处理error
@@ -284,6 +295,8 @@ pub fn must_new_state(update_sender: Sender<i64>) -> &'static Mutex<State> {
             image_files: Arc::new(vec![]),
             avif_quality: 70,
             webp_quality: 80,
+            png_quality: 80,
+            jpeg_quality: 80,
             update_sender,
         })
     })

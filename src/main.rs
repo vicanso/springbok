@@ -1,7 +1,11 @@
 use crossbeam_channel::{select, tick, unbounded};
+use home::home_dir;
+use serde::{Deserialize, Serialize};
 use slint::ComponentHandle;
 use slint::SharedString;
 use snafu::{ResultExt, Snafu};
+use std::fs;
+use std::io::Read;
 use std::time::Duration;
 use substring::Substring;
 
@@ -17,18 +21,43 @@ enum Error {
 }
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-// https://github.com/slint-ui/slint/issues/747
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+struct ConvertConfig {
+    avif_quality: Option<u8>,
+    webp_quality: Option<u8>,
+    png_quality: Option<u8>,
+    jpeg_quality: Option<u8>,
+}
+
+fn load_config(config: &Config) {
+    
+    let dir = home_dir().unwrap();
+    let config_path = dir.join(".image-converter");
+    fs::create_dir_all(config_path.clone()).unwrap();
+
+    let config_file = config_path.join("config.yml");
+    if !config_file.exists() {
+        fs::File::create(config_file.clone()).unwrap();
+    }
+
+    let mut file = fs::File::open(config_file).unwrap();
+
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).unwrap();
+    let conf: ConvertConfig = serde_yaml::from_str(&contents).unwrap();
+    config.set_avif_quality(conf.avif_quality.unwrap_or(70) as i32);
+    config.set_webp_quality(conf.webp_quality.unwrap_or(80) as i32);
+    config.set_png_quality(conf.png_quality.unwrap_or(80) as i32);
+    config.set_jpeg_quality(conf.jpeg_quality.unwrap_or(80) as i32);
+}
 
 fn main() -> Result<()> {
     let app = AppWindow::new().context(PlatformSnafu {})?;
+    load_config(&app.global::<Config>());
 
     let (update_sender, update_receiver) = unbounded::<i64>();
 
-    // https://docs.rs/crossbeam-channel/latest/crossbeam_channel/
-
     state::must_new_state(update_sender);
-
-    // app.set_webp_quality(80);
 
     let app_image_list = app.as_weak();
     std::thread::spawn(move || {
@@ -66,22 +95,22 @@ fn main() -> Result<()> {
             }
         }
     });
-    // app.on_toggle_support_avif(|| {
-    //     // TODO error 处理
-    //     let mut state = state::lock().unwrap();
-    //     state.toggle_avif();
-    // });
-    // app.on_toggle_support_webp(|| {
-    //     // TODO error 处理
-    //     let mut state = state::lock().unwrap();
-    //     state.toggle_webp();
-    // });
 
     let app_show_open_dialog = app.as_weak();
     app.on_show_open_dialog(move || {
         let mut state = state::lock().unwrap();
         if let Some(app) = app_show_open_dialog.upgrade() {
             let config = app.global::<Config>();
+            if config.get_support_jpeg() {
+                state.jpeg_quality = config.get_support_jpeg() as u8;
+            } else {
+                state.jpeg_quality = 0;
+            }
+            if config.get_support_png() {
+                state.png_quality = config.get_png_quality() as u8;
+            } else {
+                state.png_quality = 0;
+            }
             if config.get_support_avif() {
                 state.avif_quality = config.get_avif_quality() as u8;
             } else {
