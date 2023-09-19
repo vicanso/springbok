@@ -6,6 +6,7 @@ use slint::SharedString;
 use snafu::{ResultExt, Snafu};
 use std::fs;
 use std::io::Read;
+use std::path::PathBuf;
 use std::time::Duration;
 use substring::Substring;
 
@@ -21,34 +22,43 @@ enum Error {
 }
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
 struct ConvertConfig {
     avif_quality: Option<u8>,
+    support_avif: Option<bool>,
     webp_quality: Option<u8>,
+    support_webp: Option<bool>,
     png_quality: Option<u8>,
+    support_png: Option<bool>,
     jpeg_quality: Option<u8>,
+    support_jpeg: Option<bool>,
+}
+
+fn get_config_file() -> PathBuf {
+    let dir = home_dir().unwrap();
+    let config_path = dir.join(".image-converter");
+    config_path.join("config.yml")
 }
 
 fn load_config(config: &Config) {
-    
-    let dir = home_dir().unwrap();
-    let config_path = dir.join(".image-converter");
-    fs::create_dir_all(config_path.clone()).unwrap();
-
-    let config_file = config_path.join("config.yml");
+    let config_file = get_config_file();
+    fs::create_dir_all(config_file.parent().unwrap()).unwrap();
     if !config_file.exists() {
         fs::File::create(config_file.clone()).unwrap();
     }
 
     let mut file = fs::File::open(config_file).unwrap();
-
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
     let conf: ConvertConfig = serde_yaml::from_str(&contents).unwrap();
     config.set_avif_quality(conf.avif_quality.unwrap_or(70) as i32);
+    config.set_support_avif(conf.support_avif.unwrap_or(true));
     config.set_webp_quality(conf.webp_quality.unwrap_or(80) as i32);
+    config.set_support_webp(conf.support_webp.unwrap_or(true));
     config.set_png_quality(conf.png_quality.unwrap_or(80) as i32);
+    config.set_support_png(conf.support_png.unwrap_or(true));
     config.set_jpeg_quality(conf.jpeg_quality.unwrap_or(80) as i32);
+    config.set_support_jpeg(conf.support_jpeg.unwrap_or(true));
 }
 
 fn main() -> Result<()> {
@@ -121,6 +131,17 @@ fn main() -> Result<()> {
             } else {
                 state.webp_quality = 0;
             }
+            let conf = ConvertConfig {
+                avif_quality: Some(config.get_avif_quality() as u8),
+                support_avif: Some(config.get_support_avif()),
+                webp_quality: Some(config.get_webp_quality() as u8),
+                support_webp: Some(config.get_support_webp()),
+                png_quality: Some(config.get_png_quality() as u8),
+                support_png: Some(config.get_support_png()),
+                jpeg_quality: Some(config.get_jpeg_quality() as u8),
+                support_jpeg: Some(config.get_support_jpeg()),
+            };
+            fs::write(get_config_file(), serde_yaml::to_string(&conf).unwrap()).unwrap();
         }
         if state.select_files().unwrap() {
             let processing = state.processing;

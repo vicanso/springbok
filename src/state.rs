@@ -66,8 +66,8 @@ impl ImageFile {
         let status_str = match status {
             0 => "",
             1 => "...",
-            -1 => "Fail",
-            _ => "Done",
+            -1 => "✗",
+            _ => "✓",
         };
         let saving = if status == STATUS_DONE {
             format!("{}%", self.saving.load(Ordering::Relaxed))

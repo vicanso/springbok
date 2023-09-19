@@ -12,8 +12,6 @@ export global Config  {
 
     in-out property <bool> support-avif: true;
     in-out property <int> avif-quality: 0;
-
-    in-out property <string> save_path;
 }
 
 component TableView inherits Rectangle {
@@ -83,9 +81,23 @@ component TableView inherits Rectangle {
             for item in values : Rectangle { 
                 background: item[0] == "even" ? root.background.brighter(30%) : root.background;
                 HorizontalLayout {
-                    padding-bottom: 8px;
-                    padding-top: 8px;
-                    Text {
+                    padding-bottom: 10px;
+                    padding-top: 10px;
+                    if (item[1] == "✓") : Text {
+                        width: 40px;
+                        horizontal-alignment: center;
+                        text: item[1];
+                        font-weight: 600;
+                        color: Colors.rgb(82, 196, 26);
+                    }
+                    if (item[1] == "✗") : Text {
+                        width: 40px;
+                        horizontal-alignment: center;
+                        text: item[1];
+                        font-weight: 600;
+                        color: Colors.rgb(255, 77, 79);
+                    }
+                    if (item[1] != "✓" && item[1] != "✗") : Text {
                         width: 40px;
                         horizontal-alignment: center;
                         text: item[1];
@@ -122,7 +134,7 @@ component TableView inherits Rectangle {
         }
         HorizontalLayout {
             Button {
-                text: processing ? select-btn-text : "+";
+                text: processing ? select-btn-text + processing-tips : "+";
                 clicked => { show-open-dialog(); }
             }
             HorizontalLayout {
@@ -216,8 +228,9 @@ component TableView inherits Rectangle {
 export component AppWindow inherits Window {
     preferred-width: 818px;
     preferred-height: 600px;
-    callback show-open-dialog;
     title: @tr("Image Converter");
+    // icon: @image-url("rust-logo.png");
+    callback show-open-dialog;
     in property <[string]> columns;
     in property <[[string]]> values;
     in property <bool> processing;
