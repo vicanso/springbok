@@ -15,19 +15,20 @@ glob = "0.3.1"
 home = "0.5.5"
 image = { version = "0.24.7", features = ["webp-encoder", "avif-encoder"] }
 imagequant = { version = "4.2.1", default-features = false }
-lodepng = "3.7.2"
+lodepng = "3.8.0"
 mozjpeg = "0.10.1"
 once_cell = "1.18.0"
+parking_lot = "0.12.1"
 rfd = "0.12.0"
 rgb = "0.8.36"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_yaml = "0.9.25"
-slint = "1.2.0"
+slint = "1.2.1"
 snafu = "0.7.5"
 substring = "1.4.5"
 
 [build-dependencies]
-slint-build = "1.2.0"
+slint-build = "1.2.1"
 
 [profile.release]
 codegen-units = 1

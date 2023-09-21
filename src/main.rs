@@ -144,6 +144,9 @@ fn main() -> Result<()> {
             fs::write(get_config_file(), serde_yaml::to_string(&conf).unwrap()).unwrap();
         }
         if state.select_files().unwrap() {
+            if state.count() == 0 {
+                return;
+            }
             let processing = state.processing;
             app_show_open_dialog
                 .upgrade_in_event_loop(move |h| {
