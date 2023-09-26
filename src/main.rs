@@ -112,7 +112,7 @@ fn main() -> Result<()> {
         if let Some(app) = app_show_open_dialog.upgrade() {
             let config = app.global::<Config>();
             if config.get_support_jpeg() {
-                state.jpeg_quality = config.get_support_jpeg() as u8;
+                state.jpeg_quality = config.get_jpeg_quality() as u8;
             } else {
                 state.jpeg_quality = 0;
             }

@@ -6,6 +6,8 @@ fmt:
 	cargo fmt --all --
 dev:
 	cargo run
+release:
+	cargo build --release
 
 udeps:
 	cargo +nightly udeps

@@ -168,11 +168,12 @@ static TEN_THOUSANDS: f64 = 10000.0;
 struct OptimParams {
     avif: u8,
     webp: u8,
+    png: u8,
+    jpeg: u8,
 }
 
 fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_processing::ImageError> {
     // TODO 各图片的质量选择
-    let quality = 80;
     let img = load(&file.original)?;
     let size = file.size.load(Ordering::Relaxed);
     let (buf, diff) = if file.name.ends_with(".avif") {
@@ -180,11 +181,22 @@ fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_proce
     } else if file.name.ends_with(".webp") {
         img.to_webp(params.webp)
     } else if file.name.ends_with(".png") {
-        img.to_png(quality)
+        img.to_png(params.png)
     } else {
-        img.to_mozjpeg(quality)
+        img.to_mozjpeg(params.jpeg)
     }?;
-    let current_size = buf.len() as u64;
+    let mut current_size = buf.len() as u64;
+    let mut exists = false;
+    // 判断文件是否已存在
+    if let Ok(data) = file.file.metadata() {
+        // 如果存在的文件更小
+        // 由于metadata返回的size比真实的大偏差少于1kb的也忽略
+        let size = data.len();
+        if current_size >= size || size - current_size < 1024 {
+            exists = true;
+            current_size = size;
+        }
+    }
     let saving: i8 = if current_size > size {
         -(((current_size - size) * 100 / size) as i8)
     } else {
@@ -199,7 +211,9 @@ fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_proce
     }
     let v = diff * TEN_THOUSANDS;
     file.diff.store(v as i64, Ordering::Relaxed);
-    image_processing::save_file(&file.file, &buf)?;
+    if !exists {
+        image_processing::save_file(&file.file, &buf)?;
+    }
     Ok(())
 }
 
@@ -296,6 +310,8 @@ impl State {
                 // 启动子进程处理
                 let avif_quality = self.avif_quality;
                 let webp_quality = self.webp_quality;
+                let png_quality = self.png_quality;
+                let jpeg_quality = self.jpeg_quality;
                 std::thread::spawn(move || {
                     optim_images(
                         s,
@@ -303,6 +319,8 @@ impl State {
                         &OptimParams {
                             avif: avif_quality,
                             webp: webp_quality,
+                            png: png_quality,
+                            jpeg: jpeg_quality,
                         },
                     );
                 });
