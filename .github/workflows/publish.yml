@@ -1,0 +1,81 @@
+name: "publish"
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+    # branches: [ main ]
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+  CARGO_TERM_COLOR: always
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Install target
+        run: |
+          rustup update
+          rustup target add aarch64-apple-darwin
+          rustup target add x86_64-apple-darwin
+      - name: release
+        run: |
+          cargo build --release --target=aarch64-apple-darwin
+          mv target/aarch64-apple-darwin/release/image-converter ./image-converter-darwin-aarch64
+          ./.github/workflows/upload_asset.sh ./image-converter-darwin-aarch64 $GITHUB_TOKEN
+
+          cargo build --release --target=x86_64-apple-darwin
+          mv target/x86_64-apple-darwin/release/image-converter ./image-converter-darwin-x86
+          ./.github/workflows/upload_asset.sh ./image-converter-darwin-x86 $GITHUB_TOKEN
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: release
+        run: make release
+      - name: Upload Assets
+        run: |
+          mv target/release/image-converter.exe ./image-converter-windows.exe
+          ./.github/workflows/upload_asset.sh ./image-converter-windows.exe $GITHUB_TOKEN
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: release
+        uses: addnab/docker-run-action@v3
+        with:
+          image: messense/rust-musl-cross:x86_64-musl
+          options: -v ${{ github.workspace }}:/home/rust/src
+          run: |
+            make release
+            mv target/x86_64-unknown-linux-musl/release/image-converter ./image-converter-linux-x86
+      - name: Upload Assets
+        run: |
+          ./.github/workflows/upload_asset.sh ./image-converter-linux-x86 $GITHUB_TOKEN
+
+  linux-aarch64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: release
+        uses: addnab/docker-run-action@v3
+        with:
+          image: messense/rust-musl-cross:aarch64-musl
+          options: -v ${{ github.workspace }}:/home/rust/src
+          run: |
+            make release
+            mv target/aarch64-unknown-linux-musl/release/image-converter ./image-converter-linux-aarch64
+      - name: Upload Assets
+        run: |
+          ./.github/workflows/upload_asset.sh ./image-converter-linux-aarch64 $GITHUB_TOKEN
