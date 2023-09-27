@@ -6,7 +6,7 @@ if [ $# -lt 2 ]; then
     exit 1
 fi
 
-repo="vicanso/diving-rs"
+repo="vicanso/image-converter"
 file_path=$1
 bearer=$2
 
