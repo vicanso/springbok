@@ -16,13 +16,22 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+      - name: Install target
+        run: |
+          rustup update
+          rustup target add aarch64-apple-darwin
+          rustup target add x86_64-apple-darwin
       - name: release
         run: |
           uname -v
-          make release
-          mv target/release/image-converter ./image-converter-darwin
-          ./.github/workflows/upload_asset.sh ./image-converter-darwin $GITHUB_TOKEN
-
+          brew install nasm
+          cargo build --release --target=aarch64-apple-darwin
+          mv target/aarch64-apple-darwin/release/image-converter ./image-converter-darwin-aarch64
+          ./.github/workflows/upload_asset.sh ./image-converter-darwin-aarch64 $GITHUB_TOKEN
+          cargo build --release --target=x86_64-apple-darwin
+          mv target/x86_64-apple-darwin/release/image-converter ./image-converter-darwin-x86
+          ./.github/workflows/upload_asset.sh ./image-converter-darwin-x86 $GITHUB_TOKEN
+      
   windows:
     runs-on: windows-latest
     defaults:
@@ -51,7 +60,7 @@ jobs:
           image: messense/rust-musl-cross:x86_64-musl
           options: -v ${{ github.workspace }}:/home/rust/src
           run: |
-            apt update && apt install nasm pkg-config
+            apt update && apt install -y nasm pkg-config
             make release
             mv target/x86_64-unknown-linux-musl/release/image-converter ./image-converter-linux-x86
       - name: Upload Assets
@@ -68,7 +77,7 @@ jobs:
           image: messense/rust-musl-cross:aarch64-musl
           options: -v ${{ github.workspace }}:/home/rust/src
           run: |
-            apt update && apt install nasm pkg-config
+            apt update && apt install -y nasm pkg-config
             make release
             mv target/aarch64-unknown-linux-musl/release/image-converter ./image-converter-linux-aarch64
       - name: Upload Assets
