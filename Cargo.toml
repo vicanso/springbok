@@ -26,6 +26,10 @@ serde_yaml = "0.9.25"
 slint = "1.2.1"
 snafu = "0.7.5"
 substring = "1.4.5"
+time = "0.3.29"
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.17", features = ["local-time"] }
+
 
 [build-dependencies]
 slint-build = "1.2.1"

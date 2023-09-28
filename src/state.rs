@@ -9,6 +9,7 @@ use snafu::{ResultExt, Snafu};
 use std::sync::atomic::{AtomicI64, AtomicI8, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::{path::PathBuf, rc::Rc};
+use tracing::error;
 
 use crate::image_processing::{self, load};
 
@@ -221,13 +222,17 @@ fn optim_images(s: Sender<i64>, image_files: Arc<Vec<ImageFile>>, params: &Optim
     for (index, file) in image_files.iter().enumerate() {
         let count = index as i64 + 1;
         file.status.store(STATUS_PROCESSING, Ordering::Relaxed);
-        if let Ok(()) = optim_image(file, params) {
-            file.status.store(STATUS_DONE, Ordering::Relaxed);
-        } else {
-            file.status.store(STATUS_FAIL, Ordering::Relaxed);
+        match optim_image(file, params) {
+            Ok(()) => file.status.store(STATUS_DONE, Ordering::Relaxed),
+            Err(err) => {
+                let name = file.name.clone();
+                error!(name, err = err.to_string(),);
+                file.status.store(STATUS_FAIL, Ordering::Relaxed);
+            }
         }
-        // TODO error的处理
-        s.send(count).unwrap();
+        if let Err(err) = s.send(count) {
+            error!(category = "channel-sender", err = err.to_string(),);
+        }
     }
 }
 
@@ -303,8 +308,9 @@ impl State {
         match load_images(&files.unwrap(), &ext_list, &support_formats) {
             Ok(image_files) => {
                 self.image_files = Arc::new(image_files);
-                // TODO 处理error
-                self.update_sender.send(0).unwrap();
+                if let Err(err) = self.update_sender.send(0) {
+                    error!(category = "channel-sender", err = err.to_string(),);
+                }
                 let s = self.update_sender.clone();
                 let image_files = self.image_files.clone();
                 // 启动子进程处理

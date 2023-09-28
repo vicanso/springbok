@@ -9,6 +9,9 @@ use std::io::Read;
 use std::path::PathBuf;
 use std::time::Duration;
 use substring::Substring;
+use tracing::error;
+use tracing::Level;
+use tracing_subscriber::FmtSubscriber;
 
 slint::include_modules!();
 
@@ -19,6 +22,12 @@ mod state;
 enum Error {
     #[snafu(display("Platform: {source}"))]
     Platform { source: slint::PlatformError },
+    #[snafu(display("Io: {source}"))]
+    Io { source: std::io::Error },
+    #[snafu(display("Yaml: {source}"))]
+    Yaml { source: serde_yaml::Error },
+    #[snafu(display("{message}"))]
+    NotFound { message: String },
 }
 type Result<T, E = Error> = std::result::Result<T, E>;
 
@@ -34,23 +43,25 @@ struct ConvertConfig {
     support_jpeg: Option<bool>,
 }
 
-fn get_config_file() -> PathBuf {
-    let dir = home_dir().unwrap();
+fn get_config_file() -> Result<PathBuf> {
+    let dir = home_dir().ok_or(Error::NotFound {
+        message: "home is not found".to_string(),
+    })?;
     let config_path = dir.join(".image-converter");
-    config_path.join("config.yml")
+    Ok(config_path.join("config.yml"))
 }
 
-fn load_config(config: &Config) {
-    let config_file = get_config_file();
-    fs::create_dir_all(config_file.parent().unwrap()).unwrap();
+fn load_config(config: &Config) -> Result<()> {
+    let config_file = get_config_file()?;
+    fs::create_dir_all(config_file.parent().unwrap()).context(IoSnafu {})?;
     if !config_file.exists() {
-        fs::File::create(config_file.clone()).unwrap();
+        fs::File::create(config_file.clone()).context(IoSnafu {})?;
     }
 
-    let mut file = fs::File::open(config_file).unwrap();
+    let mut file = fs::File::open(config_file).context(IoSnafu {})?;
     let mut contents = String::new();
-    file.read_to_string(&mut contents).unwrap();
-    let conf: ConvertConfig = serde_yaml::from_str(&contents).unwrap();
+    file.read_to_string(&mut contents).context(IoSnafu {})?;
+    let conf: ConvertConfig = serde_yaml::from_str(&contents).context(YamlSnafu {})?;
     config.set_avif_quality(conf.avif_quality.unwrap_or(70) as i32);
     config.set_support_avif(conf.support_avif.unwrap_or(true));
     config.set_webp_quality(conf.webp_quality.unwrap_or(80) as i32);
@@ -59,11 +70,29 @@ fn load_config(config: &Config) {
     config.set_support_png(conf.support_png.unwrap_or(true));
     config.set_jpeg_quality(conf.jpeg_quality.unwrap_or(80) as i32);
     config.set_support_jpeg(conf.support_jpeg.unwrap_or(true));
+    Ok(())
+}
+
+fn init_logger() {
+    let timer = tracing_subscriber::fmt::time::OffsetTime::local_rfc_3339().unwrap_or_else(|_| {
+        tracing_subscriber::fmt::time::OffsetTime::new(
+            time::UtcOffset::from_hms(0, 0, 0).unwrap(),
+            time::format_description::well_known::Rfc3339,
+        )
+    });
+
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .with_timer(timer)
+        .with_ansi(false)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 }
 
 fn main() -> Result<()> {
+    init_logger();
     let app = AppWindow::new().context(PlatformSnafu {})?;
-    load_config(&app.global::<Config>());
+    load_config(&app.global::<Config>())?;
 
     let (update_sender, update_receiver) = unbounded::<i64>();
 
@@ -78,18 +107,31 @@ fn main() -> Result<()> {
             select! {
               recv(ticker) -> _ => {
                 dot_count += 1;
-                app_image_list.upgrade_in_event_loop(move |h| {
+                if let Err(err) = app_image_list.upgrade_in_event_loop(move |h| {
                     let size = dot_count % 3;
                     h.set_select_btn_text(SharedString::from("...".substring(0, size + 1)));
-                }).unwrap();
+                }) {
+                    error!(
+                        category = "event-loop",
+                        err = err.to_string(),
+                    );
+                };
               },
               recv(update_receiver) -> result => {
-                // TODO error的处理
+                if let Err(err) = result {
+                    error!(
+                        category = "recv",
+                        err = err.to_string(),
+                    );
+                    return;
+                }
+                // error已处理
                 let count = result.unwrap_or_default();
                 if count == 0 {
                     dot_count = 0;
                 }
-                app_image_list.upgrade_in_event_loop(move |h| {
+                if let Err(err) = app_image_list.upgrade_in_event_loop(move |h| {
+                    // 只要已初始化则不会异常，因此直接使用unwrap
                     let mut state = state::lock().unwrap();
                     h.set_values(state.get_values());
                     let total = state.count();
@@ -99,8 +141,12 @@ fn main() -> Result<()> {
                         state.processing = false;
                         h.set_processing(state.processing);
                     }
-                })
-                .unwrap();
+                }) {
+                    error!(
+                        category = "event-loop",
+                        err = err.to_string(),
+                    );
+                }
               },
             }
         }
@@ -108,6 +154,7 @@ fn main() -> Result<()> {
 
     let app_show_open_dialog = app.as_weak();
     app.on_show_open_dialog(move || {
+        // state 只要初始化则不会异常
         let mut state = state::lock().unwrap();
         if let Some(app) = app_show_open_dialog.upgrade() {
             let config = app.global::<Config>();
@@ -131,29 +178,39 @@ fn main() -> Result<()> {
             } else {
                 state.webp_quality = 0;
             }
-            let conf = ConvertConfig {
-                avif_quality: Some(config.get_avif_quality() as u8),
-                support_avif: Some(config.get_support_avif()),
-                webp_quality: Some(config.get_webp_quality() as u8),
-                support_webp: Some(config.get_support_webp()),
-                png_quality: Some(config.get_png_quality() as u8),
-                support_png: Some(config.get_support_png()),
-                jpeg_quality: Some(config.get_jpeg_quality() as u8),
-                support_jpeg: Some(config.get_support_jpeg()),
-            };
-            fs::write(get_config_file(), serde_yaml::to_string(&conf).unwrap()).unwrap();
-        }
-        if state.select_files().unwrap() {
-            if state.count() == 0 {
-                return;
+            if let Ok(file) = get_config_file() {
+                let conf = ConvertConfig {
+                    avif_quality: Some(config.get_avif_quality() as u8),
+                    support_avif: Some(config.get_support_avif()),
+                    webp_quality: Some(config.get_webp_quality() as u8),
+                    support_webp: Some(config.get_support_webp()),
+                    png_quality: Some(config.get_png_quality() as u8),
+                    support_png: Some(config.get_support_png()),
+                    jpeg_quality: Some(config.get_jpeg_quality() as u8),
+                    support_jpeg: Some(config.get_support_jpeg()),
+                };
+                // to yml不会失败，因此使用unwrap
+                if let Err(err) = fs::write(file, serde_yaml::to_string(&conf).unwrap()) {
+                    error!(category = "fs-write", err = err.to_string());
+                }
             }
-            let processing = state.processing;
-            app_show_open_dialog
-                .upgrade_in_event_loop(move |h| {
+        }
+        match state.select_files() {
+            Ok(_) => {
+                if state.count() == 0 {
+                    return;
+                }
+                let processing = state.processing;
+                if let Err(err) = app_show_open_dialog.upgrade_in_event_loop(move |h| {
                     h.set_select_btn_text(SharedString::from("..."));
                     h.set_processing(processing);
-                })
-                .unwrap();
+                }) {
+                    error!(category = "event-loop", err = err.to_string(),);
+                }
+            }
+            Err(err) => {
+                error!(category = "select-files", err = err.to_string());
+            }
         }
     });
     app.set_columns(state::State::get_columns());

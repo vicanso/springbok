@@ -8,6 +8,9 @@ dev:
 	cargo run
 release:
 	cargo build --release
+macos:
+	mv ./target/release/image-converter ./macos/Contents/MacOS/
+	mv ./macos ./ImageConverter.app
 
 udeps:
 	cargo +nightly udeps
