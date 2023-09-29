@@ -25,12 +25,13 @@ jobs:
         run: |
           uname -v
           brew install nasm
-          cargo build --release --target=aarch64-apple-darwin
-          mv target/aarch64-apple-darwin/release/image-converter ./image-converter-darwin-aarch64
-          ./.github/workflows/upload_asset.sh ./image-converter-darwin-aarch64 $GITHUB_TOKEN
           cargo build --release --target=x86_64-apple-darwin
           mv target/x86_64-apple-darwin/release/image-converter ./image-converter-darwin-x86
           ./.github/workflows/upload_asset.sh ./image-converter-darwin-x86 $GITHUB_TOKEN
+
+          cargo build --release --target=aarch64-apple-darwin
+          mv target/aarch64-apple-darwin/release/image-converter ./image-converter-darwin-aarch64
+          ./.github/workflows/upload_asset.sh ./image-converter-darwin-aarch64 $GITHUB_TOKEN
       
   windows:
     runs-on: windows-latest
@@ -54,17 +55,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: release
-        uses: addnab/docker-run-action@v3
+      - uses: actions-rs/toolchain@v1
         with:
-          image: messense/rust-musl-cross:x86_64-musl
-          options: -v ${{ github.workspace }}:/home/rust/src
-          run: |
-            apt update && apt install -y nasm pkg-config
-            make release
-            mv target/x86_64-unknown-linux-musl/release/image-converter ./image-converter-linux-x86
+          toolchain: stable
+      - name: release
+        run: |
+          apt update && apt install -y nasm pkg-config
+          make release
       - name: Upload Assets
         run: |
+          mv target/release/image-converter ./image-converter-linux-x86
           ./.github/workflows/upload_asset.sh ./image-converter-linux-x86 $GITHUB_TOKEN
 
   linux-aarch64:
