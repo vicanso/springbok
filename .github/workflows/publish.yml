@@ -1,8 +1,8 @@
 name: "publish"
 on:
   push:
-    # tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
-    branches: [ main ]
+    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+    # branches: [ main ]
 
 env:
   GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -50,36 +50,3 @@ jobs:
         run: |
           mv target/release/image-converter.exe ./image-converter-windows.exe
           ./.github/workflows/upload_asset.sh ./image-converter-windows.exe $GITHUB_TOKEN
-
-  linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - uses: ilammy/setup-nasm@v1
-      - name: release
-        run: |
-          make release
-      - name: Upload Assets
-        run: |
-          mv target/release/image-converter ./image-converter-linux-x86
-          ./.github/workflows/upload_asset.sh ./image-converter-linux-x86 $GITHUB_TOKEN
-
-  linux-aarch64:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: release
-        uses: addnab/docker-run-action@v3
-        with:
-          image: messense/rust-musl-cross:aarch64-musl
-          options: -v ${{ github.workspace }}:/home/rust/src
-          run: |
-            apt update && apt install -y nasm pkg-config
-            make release
-            mv target/aarch64-unknown-linux-musl/release/image-converter ./image-converter-linux-aarch64
-      - name: Upload Assets
-        run: |
-          ./.github/workflows/upload_asset.sh ./image-converter-linux-aarch64 $GITHUB_TOKEN
