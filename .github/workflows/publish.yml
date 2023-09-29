@@ -58,9 +58,9 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+      - uses: ilammy/setup-nasm@v1
       - name: release
         run: |
-          apt update && apt install -y nasm pkg-config
           make release
       - name: Upload Assets
         run: |
