@@ -40,7 +40,7 @@ jobs:
           uname -v
           cargo build --release --target=aarch64-apple-darwin
           mv ./target/aarch64-apple-darwin/image-converter ./macos/Contents/MacOS/
-	        mv ./macos ./ImageConverter.app
+          mv ./macos ./ImageConverter.app
           tar -czvf ImageConverter-aarch64.tar.gz ImageConverter.app
           ./.github/workflows/upload_asset.sh ./ImageConverter-aarch64.tar.gz $GITHUB_TOKEN
         
