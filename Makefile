@@ -1,4 +1,4 @@
-.PHONY: default
+.PHONY: default macos
 
 lint:
 	cargo clippy 

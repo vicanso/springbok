@@ -16,23 +16,35 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - name: Install target
-        run: |
-          rustup update
-          rustup target add aarch64-apple-darwin
-          rustup target add x86_64-apple-darwin
       - name: release
         run: |
           uname -v
           brew install nasm
-          cargo build --release --target=x86_64-apple-darwin
-          mv target/x86_64-apple-darwin/release/image-converter ./image-converter-darwin-x86
-          ./.github/workflows/upload_asset.sh ./image-converter-darwin-x86 $GITHUB_TOKEN
-
+          make release
+          make macos
+          tar -czvf ImageConverter-x86_64.tar.gz ImageConverter.app
+          ./.github/workflows/upload_asset.sh ./ImageConverter-x86_64.tar.gz $GITHUB_TOKEN
+  macos-aarch:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Install target
+        run: |
+          rustup update
+          rustup target add aarch64-apple-darwin
+      - name: release
+        run: |
+          uname -v
           cargo build --release --target=aarch64-apple-darwin
-          mv target/aarch64-apple-darwin/release/image-converter ./image-converter-darwin-aarch64
-          ./.github/workflows/upload_asset.sh ./image-converter-darwin-aarch64 $GITHUB_TOKEN
-      
+          mv ./target/aarch64-apple-darwin/image-converter ./macos/Contents/MacOS/
+	        mv ./macos ./ImageConverter.app
+          tar -czvf ImageConverter-aarch64.tar.gz ImageConverter.app
+          ./.github/workflows/upload_asset.sh ./ImageConverter-aarch64.tar.gz $GITHUB_TOKEN
+        
+
   windows:
     runs-on: windows-latest
     defaults:
