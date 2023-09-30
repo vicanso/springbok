@@ -22,8 +22,8 @@ jobs:
           brew install nasm
           make release
           make macos
-          tar -czvf ImageConverter-x86_64.tar.gz ImageConverter.app
-          ./.github/workflows/upload_asset.sh ./ImageConverter-x86_64.tar.gz $GITHUB_TOKEN
+          tar -czvf ImageConverter-darwin-x86_64.tar.gz ImageConverter.app
+          ./.github/workflows/upload_asset.sh ./ImageConverter-darwin-x86_64.tar.gz $GITHUB_TOKEN
   macos-aarch:
     runs-on: macos-latest
     steps:
@@ -39,10 +39,10 @@ jobs:
         run: |
           uname -v
           cargo build --release --target=aarch64-apple-darwin
-          mv ./target/aarch64-apple-darwin/image-converter ./macos/Contents/MacOS/
+          mv ./target/aarch64-apple-darwin/release/image-converter ./macos/Contents/MacOS/
           mv ./macos ./ImageConverter.app
-          tar -czvf ImageConverter-aarch64.tar.gz ImageConverter.app
-          ./.github/workflows/upload_asset.sh ./ImageConverter-aarch64.tar.gz $GITHUB_TOKEN
+          tar -czvf ImageConverter-darwin-aarch64.tar.gz ImageConverter.app
+          ./.github/workflows/upload_asset.sh ./ImageConverter-darwin-aarch64.tar.gz $GITHUB_TOKEN
         
 
   windows:
