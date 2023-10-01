@@ -8,6 +8,7 @@ use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
 use std::time::Duration;
+use std::{fs::File, sync::Mutex};
 use substring::Substring;
 use tracing::error;
 use tracing::Level;
@@ -73,26 +74,46 @@ fn load_config(config: &Config) -> Result<()> {
     Ok(())
 }
 
-fn init_logger() {
+fn init_logger() -> Result<()> {
     let timer = tracing_subscriber::fmt::time::OffsetTime::local_rfc_3339().unwrap_or_else(|_| {
         tracing_subscriber::fmt::time::OffsetTime::new(
             time::UtcOffset::from_hms(0, 0, 0).unwrap(),
             time::format_description::well_known::Rfc3339,
         )
     });
+    if cfg!(debug_assertions) {
+        let subscriber = FmtSubscriber::builder()
+            .with_max_level(Level::INFO)
+            .with_timer(timer)
+            .with_ansi(false)
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("setting default subscriber failed");
+    } else {
+        let log_file = get_config_file()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("image-converter.log");
 
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .with_timer(timer)
-        .with_ansi(false)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
+        let log_file = File::create(log_file).context(IoSnafu {})?;
+        let subscriber = tracing_subscriber::fmt()
+            .with_writer(Mutex::new(log_file))
+            .with_max_level(Level::INFO)
+            .with_timer(timer)
+            .with_ansi(false)
+            .finish();
+
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("setting default subscriber failed");
+    }
+    Ok(())
 }
 
 fn main() -> Result<()> {
-    init_logger();
     let app = AppWindow::new().context(PlatformSnafu {})?;
     load_config(&app.global::<Config>())?;
+    init_logger()?;
 
     let (update_sender, update_receiver) = unbounded::<i64>();
 
