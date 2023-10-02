@@ -18,6 +18,7 @@ jobs:
       - uses: ilammy/setup-nasm@v1
       - name: release
         run: |
+          apt update && apt install -y libgtk-3-dev
           make release
   # windows:
   #   runs-on: windows-latest
