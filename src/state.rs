@@ -6,12 +6,11 @@ use parking_lot::{Mutex, MutexGuard};
 use rfd::FileDialog;
 use slint::{ModelRc, SharedString, VecModel};
 use snafu::{ResultExt, Snafu};
+use std::os::unix::fs::PermissionsExt;
 use std::sync::atomic::{AtomicI64, AtomicI8, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::{path::PathBuf, rc::Rc};
 use tracing::error;
-use std::os::unix::fs::PermissionsExt;
-
 
 use crate::image_processing::{self, load};
 
