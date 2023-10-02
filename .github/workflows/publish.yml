@@ -62,3 +62,21 @@ jobs:
         run: |
           mv target/release/image-converter.exe ./image-converter-windows.exe
           ./.github/workflows/upload_asset.sh ./image-converter-windows.exe $GITHUB_TOKEN
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: ilammy/setup-nasm@v1
+      - name: release
+        run: |
+          sudo apt update
+          sudo apt install -y libgtk-3-dev
+          make release
+      - name: Upload Assets
+        run: |
+          mv target/release/image-converter ./image-converter-linux
+          ./.github/workflows/upload_asset.sh ./image-converter-linux $GITHUB_TOKEN
