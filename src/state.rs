@@ -6,7 +6,6 @@ use parking_lot::{Mutex, MutexGuard};
 use rfd::FileDialog;
 use slint::{ModelRc, SharedString, VecModel};
 use snafu::{ResultExt, Snafu};
-use std::os::unix::fs::PermissionsExt;
 use std::sync::atomic::{AtomicI64, AtomicI8, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::{path::PathBuf, rc::Rc};
@@ -193,7 +192,12 @@ fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_proce
         // 文件仅读则无法覆盖
         if data.permissions().readonly() {
             let mut perm = data.permissions();
-            perm.set_mode(0o644);
+            if cfg!(unix) {
+                use std::os::unix::fs::PermissionsExt;
+                perm.set_mode(0o644);
+            } else {
+                perm.set_readonly(false);
+            }
             if let Err(err) = std::fs::set_permissions(file.file.clone(), perm) {
                 let name = file.file.to_string_lossy().to_string();
                 error!(category = "set-permissions", name, err = err.to_string(),);
