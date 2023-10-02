@@ -10,6 +10,8 @@ use std::sync::atomic::{AtomicI64, AtomicI8, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::{path::PathBuf, rc::Rc};
 use tracing::error;
+use std::os::unix::fs::PermissionsExt;
+
 
 use crate::image_processing::{self, load};
 
@@ -174,7 +176,6 @@ struct OptimParams {
 }
 
 fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_processing::ImageError> {
-    // TODO 各图片的质量选择
     let img = load(&file.original)?;
     let size = file.size.load(Ordering::Relaxed);
     let (buf, diff) = if file.name.ends_with(".avif") {
@@ -190,6 +191,15 @@ fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_proce
     let mut exists = false;
     // 判断文件是否已存在
     if let Ok(data) = file.file.metadata() {
+        // 文件仅读则无法覆盖
+        if data.permissions().readonly() {
+            let mut perm = data.permissions();
+            perm.set_mode(0o644);
+            if let Err(err) = std::fs::set_permissions(file.file.clone(), perm) {
+                let name = file.file.to_string_lossy().to_string();
+                error!(category = "set-permissions", name, err = err.to_string(),);
+            }
+        }
         // 如果存在的文件更小
         // 由于metadata返回的size比真实的大偏差少于1kb的也忽略
         let size = data.len();
