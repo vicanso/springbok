@@ -192,10 +192,13 @@ fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_proce
         // 文件仅读则无法覆盖
         if data.permissions().readonly() {
             let mut perm = data.permissions();
-            if cfg!(unix) {
+            #[cfg(unix)]
+            {
                 use std::os::unix::fs::PermissionsExt;
                 perm.set_mode(0o644);
-            } else {
+            }
+            #[cfg(not(unix))]
+            {
                 perm.set_readonly(false);
             }
             if let Err(err) = std::fs::set_permissions(file.file.clone(), perm) {
