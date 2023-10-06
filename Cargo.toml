@@ -19,7 +19,7 @@ lodepng = "3.9.0"
 mozjpeg = "0.10.3"
 once_cell = "1.18.0"
 parking_lot = "0.12.1"
-rfd = "0.12.0"
+rfdx = "0.1.2"
 rgb = "0.8.36"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_yaml = "0.9.25"

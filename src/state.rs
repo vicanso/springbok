@@ -3,7 +3,7 @@ use crossbeam_channel::Sender;
 use glob::{glob, PatternError};
 use once_cell::sync::OnceCell;
 use parking_lot::{Mutex, MutexGuard};
-use rfd::FileDialog;
+use rfdx::FileDialog;
 use slint::{ModelRc, SharedString, VecModel};
 use snafu::{ResultExt, Snafu};
 use std::sync::atomic::{AtomicI64, AtomicI8, AtomicU64, Ordering};
@@ -299,10 +299,11 @@ impl State {
             ext_list.push("png".to_string());
         }
         let mut extensions = ext_list.clone();
-        // 目录无后续
+        // 目录无后缀
         extensions.push("".to_string());
 
         // TODO 后续若支持file与folder同时选择则放开
+        // 暂时调整了rfd模块，macos现支持选择
         let files = FileDialog::new()
             .set_title("Please select images")
             .add_filter("image-or-folder", &extensions)
