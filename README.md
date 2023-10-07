@@ -6,6 +6,12 @@
 
 程序日志文件可查看`~/.image-converter/image-converter.log`
 
+因为无苹果开发者账号，因此macos需要执行以下命令：
+
+```bash
+sudo xattr -rd com.apple.quarantine /Applications/ImageConverter.app
+```
+
 ## 功能说明
 
 ![](./assets/image-converter.png)
