@@ -1,6 +1,6 @@
 [package]
 name = "image-converter"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["tree.xie@outlook.com"]
 edition = "2021"
 build = "build.rs"
