@@ -298,15 +298,12 @@ impl State {
         if self.png_quality > 0 {
             ext_list.push("png".to_string());
         }
-        let mut extensions = ext_list.clone();
-        // 目录无后缀
-        extensions.push("".to_string());
 
         // TODO 后续若支持file与folder同时选择则放开
         // 暂时调整了rfd模块，macos现支持选择
         let files = FileDialog::new()
             .set_title("Please select images")
-            .add_filter("image-or-folder", &extensions)
+            .add_filter("image-or-folder", &ext_list)
             .pick_folders();
         if files.is_none() {
             return Ok(false);
