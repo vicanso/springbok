@@ -48,7 +48,7 @@ fn get_config_file() -> Result<PathBuf> {
     let dir = home_dir().ok_or(Error::NotFound {
         message: "home is not found".to_string(),
     })?;
-    let config_path = dir.join(".image-converter");
+    let config_path = dir.join(".springbok");
     Ok(config_path.join("config.yml"))
 }
 
@@ -94,7 +94,7 @@ fn init_logger() -> Result<()> {
             .unwrap()
             .parent()
             .unwrap()
-            .join("image-converter.log");
+            .join("springbok.log");
 
         let log_file = File::create(log_file).context(IoSnafu {})?;
         let subscriber = tracing_subscriber::fmt()

@@ -1,5 +1,5 @@
 [package]
-name = "image-converter"
+name = "springbok"
 version = "0.1.4"
 authors = ["tree.xie@outlook.com"]
 edition = "2021"

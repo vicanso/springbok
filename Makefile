@@ -9,8 +9,8 @@ dev:
 release:
 	cargo build --release
 macos:
-	mv ./target/release/image-converter ./macos/Contents/MacOS/
-	mv ./macos ./ImageConverter.app
+	mv ./target/release/springbok ./macos/Contents/MacOS/
+	mv ./macos ./Springbok.app
 
 udeps:
 	cargo +nightly udeps

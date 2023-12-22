@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>ImageConverter</string>
 	<key>CFBundleExecutable</key>
-	<string>image-converter</string>
+	<string>springbok</string>
 	<key>CFBundleIconFile</key>
 	<string>icon.icns</string>
 	<key>CFBundleIdentifier</key>
