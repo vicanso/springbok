@@ -9,7 +9,7 @@
 因为无苹果开发者账号，因此macos需要执行以下命令：
 
 ```bash
-sudo xattr -rd com.apple.quarantine /Applications/ImageConverter.app
+sudo xattr -rd com.apple.quarantine /Applications/Springbok.app
 ```
 
 ## 功能说明
