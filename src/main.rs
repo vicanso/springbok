@@ -16,7 +16,6 @@ use tracing_subscriber::FmtSubscriber;
 
 slint::include_modules!();
 
-mod image_processing;
 mod state;
 
 #[derive(Debug, Snafu)]

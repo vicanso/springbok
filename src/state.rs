@@ -1,17 +1,18 @@
 use bytesize::ByteSize;
 use crossbeam_channel::Sender;
 use glob::{glob, PatternError};
+use imageoptimize::{ImageError, ImageInfo};
 use once_cell::sync::OnceCell;
 use parking_lot::{Mutex, MutexGuard};
 use rfdx::FileDialog;
 use slint::{ModelRc, SharedString, VecModel};
 use snafu::{ResultExt, Snafu};
+use std::io::{Cursor, Read};
 use std::sync::atomic::{AtomicI64, AtomicI8, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::{fs, fs::File};
 use std::{path::PathBuf, rc::Rc};
 use tracing::error;
-
-use crate::image_processing::{self, load};
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -23,8 +24,16 @@ pub enum Error {
     Lock { message: String },
     #[snafu(display("State is not initialized"))]
     Init {},
+    #[snafu(display("Image: {source}"))]
+    Image { source: ImageError },
 }
 type Result<T, E = Error> = std::result::Result<T, E>;
+
+impl From<ImageError> for Error {
+    fn from(value: ImageError) -> Self {
+        Error::Image { source: value }
+    }
+}
 
 fn new_model_shared_string_slice(data: &[String]) -> ModelRc<SharedString> {
     let columns: Vec<SharedString> = data.iter().map(SharedString::from).collect();
@@ -173,10 +182,28 @@ struct OptimParams {
     jpeg: u8,
 }
 
-fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_processing::ImageError> {
+pub fn save_file(file: &PathBuf, data: &[u8]) -> Result<()> {
+    fs::write(file, data).context(IoSnafu {})
+}
+
+pub fn load(path: &PathBuf) -> Result<ImageInfo> {
+    let ext = path
+        .extension()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+    let mut file = File::open(path).context(IoSnafu {})?;
+    let mut contents = vec![];
+    file.read_to_end(&mut contents).context(IoSnafu {})?;
+    let c = Cursor::new(contents);
+    let img = imageoptimize::load(c, &ext)?;
+    Ok(img)
+}
+
+fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<()> {
     let img = load(&file.original)?;
     let size = file.size.load(Ordering::Relaxed);
-    let (buf, diff) = if file.name.ends_with(".avif") {
+    let buf = if file.name.ends_with(".avif") {
         img.to_avif(params.avif, 1)
     } else if file.name.ends_with(".webp") {
         img.to_webp(params.webp)
@@ -185,6 +212,7 @@ fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_proce
     } else {
         img.to_mozjpeg(params.jpeg)
     }?;
+    let diff = 0.0_f64;
     let mut current_size = buf.len() as u64;
     let mut exists = false;
     // 判断文件是否已存在
@@ -229,7 +257,7 @@ fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<(), image_proce
     let v = diff * TEN_THOUSANDS;
     file.diff.store(v as i64, Ordering::Relaxed);
     if !exists {
-        image_processing::save_file(&file.file, &buf)?;
+        save_file(&file.file, &buf)?;
     }
     Ok(())
 }
