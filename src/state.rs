@@ -1,16 +1,17 @@
+use base64::{engine::general_purpose, Engine as _};
 use bytesize::ByteSize;
 use crossbeam_channel::Sender;
 use glob::{glob, PatternError};
-use imageoptimize::{ImageError, ImageInfo};
+use imageoptimize::ImageProcessingError;
 use once_cell::sync::OnceCell;
 use parking_lot::{Mutex, MutexGuard};
 use rfdx::FileDialog;
 use slint::{ModelRc, SharedString, VecModel};
 use snafu::{ResultExt, Snafu};
-use std::io::{Cursor, Read};
+use std::fs;
+use std::io::Read;
 use std::sync::atomic::{AtomicI64, AtomicI8, AtomicU64, Ordering};
 use std::sync::Arc;
-use std::{fs, fs::File};
 use std::{path::PathBuf, rc::Rc};
 use tracing::error;
 
@@ -25,13 +26,13 @@ pub enum Error {
     #[snafu(display("State is not initialized"))]
     Init {},
     #[snafu(display("Image: {source}"))]
-    Image { source: ImageError },
+    ImageProcessing { source: ImageProcessingError },
 }
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-impl From<ImageError> for Error {
-    fn from(value: ImageError) -> Self {
-        Error::Image { source: value }
+impl From<ImageProcessingError> for Error {
+    fn from(value: ImageProcessingError) -> Self {
+        Error::ImageProcessing { source: value }
     }
 }
 
@@ -58,6 +59,8 @@ struct ImageFile {
     status: AtomicI8,
     // 文件名
     name: String,
+    // 原始数据
+    original_data: Arc<Vec<u8>>,
     // 原文件
     original: PathBuf,
     // 新文件
@@ -138,6 +141,10 @@ fn load_images(
     }
     for entry in entry_list.iter() {
         let metadata = std::fs::metadata(entry).context(IoSnafu {})?;
+        let mut file = fs::File::open(entry).context(IoSnafu)?;
+        let mut contents = vec![];
+        file.read_to_end(&mut contents).context(IoSnafu)?;
+        let original_data = Arc::new(contents);
         for item in formats.iter() {
             let mut file = entry.clone();
             file.set_extension(item);
@@ -150,6 +157,7 @@ fn load_images(
                 status: AtomicI8::new(STATUS_PENDING),
                 name: name.clone(),
                 original: entry.clone(),
+                original_data: original_data.clone(),
                 file,
                 size: AtomicU64::new(metadata.len()),
                 saving: AtomicI8::new(0),
@@ -164,6 +172,7 @@ fn load_images(
                 .to_string_lossy()
                 .to_string(),
             original: entry.clone(),
+            original_data,
             file: entry.clone(),
             size: AtomicU64::new(metadata.len()),
             saving: AtomicI8::new(0),
@@ -186,33 +195,53 @@ pub fn save_file(file: &PathBuf, data: &[u8]) -> Result<()> {
     fs::write(file, data).context(IoSnafu {})
 }
 
-pub fn load(path: &PathBuf) -> Result<ImageInfo> {
-    let ext = path
+async fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<()> {
+    let mut original_ext = file
+        .original
         .extension()
         .unwrap_or_default()
         .to_string_lossy()
         .to_string();
-    let mut file = File::open(path).context(IoSnafu {})?;
-    let mut contents = vec![];
-    file.read_to_end(&mut contents).context(IoSnafu {})?;
-    let c = Cursor::new(contents);
-    let img = imageoptimize::load(c, &ext)?;
-    Ok(img)
-}
 
-fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<()> {
-    let img = load(&file.original)?;
-    let size = file.size.load(Ordering::Relaxed);
-    let buf = if file.name.ends_with(".avif") {
-        img.to_avif(params.avif, 1)
-    } else if file.name.ends_with(".webp") {
-        img.to_webp(params.webp)
-    } else if file.name.ends_with(".png") {
-        img.to_png(params.png)
+    if original_ext.is_empty() {
+        original_ext = "jpeg".to_string();
+    }
+    let ext = if file.name.contains(".avif") {
+        "avif"
+    } else if file.name.contains(".webp") {
+        "webp"
+    } else if file.name.contains(".png") {
+        "png"
     } else {
-        img.to_mozjpeg(params.jpeg)
-    }?;
-    let diff = 0.0_f64;
+        "jpeg"
+    };
+
+    let quality = match ext {
+        "avif" => params.avif,
+        "webp" => params.webp,
+        "png" => params.png,
+        _ => params.jpeg,
+    };
+
+    let tasks = vec![
+        vec![
+            imageoptimize::PROCESS_LOAD.to_string(),
+            general_purpose::STANDARD.encode(&*file.original_data),
+            original_ext,
+        ],
+        vec![
+            imageoptimize::PROCESS_OPTIM.to_string(),
+            ext.to_string(),
+            quality.to_string(),
+            "1".to_string(),
+        ],
+        // 参数需要最少两个
+        vec![imageoptimize::PROCESS_DIFF.to_string()],
+    ];
+    let result = imageoptimize::run(tasks).await?;
+    let diff = result.diff;
+    let buf = result.get_buffer()?;
+    let size = file.size.load(Ordering::Relaxed);
     let mut current_size = buf.len() as u64;
     let mut exists = false;
     // 判断文件是否已存在
@@ -262,11 +291,11 @@ fn optim_image(file: &ImageFile, params: &OptimParams) -> Result<()> {
     Ok(())
 }
 
-fn optim_images(s: Sender<i64>, image_files: Arc<Vec<ImageFile>>, params: &OptimParams) {
+async fn optim_images(s: Sender<i64>, image_files: Arc<Vec<ImageFile>>, params: &OptimParams) {
     for (index, file) in image_files.iter().enumerate() {
         let count = index as i64 + 1;
         file.status.store(STATUS_PROCESSING, Ordering::Relaxed);
-        match optim_image(file, params) {
+        match optim_image(file, params).await {
             Ok(()) => file.status.store(STATUS_DONE, Ordering::Relaxed),
             Err(err) => {
                 let name = file.name.clone();
@@ -360,17 +389,31 @@ impl State {
                 let webp_quality = self.webp_quality;
                 let png_quality = self.png_quality;
                 let jpeg_quality = self.jpeg_quality;
+
                 std::thread::spawn(move || {
-                    optim_images(
-                        s,
-                        image_files,
-                        &OptimParams {
-                            avif: avif_quality,
-                            webp: webp_quality,
-                            png: png_quality,
-                            jpeg: jpeg_quality,
-                        },
-                    );
+                    let mut worker_threads = num_cpus::get() / 2;
+                    if worker_threads == 0 {
+                        worker_threads = 1;
+                    }
+                    let runtime = tokio::runtime::Builder::new_multi_thread()
+                        .enable_all()
+                        .thread_name("image_optimize")
+                        .worker_threads(worker_threads)
+                        .build()
+                        .expect("Creating tokio runtime");
+                    runtime.block_on(async move {
+                        optim_images(
+                            s,
+                            image_files,
+                            &OptimParams {
+                                avif: avif_quality,
+                                webp: webp_quality,
+                                png: png_quality,
+                                jpeg: jpeg_quality,
+                            },
+                        )
+                        .await;
+                    });
                 });
             }
             Err(err) => {
