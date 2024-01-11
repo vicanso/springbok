@@ -22,8 +22,8 @@ jobs:
           brew install nasm
           make release
           make macos
-          tar -czvf ImageConverter-darwin-x86_64.tar.gz ImageConverter.app
-          ./.github/workflows/upload_asset.sh ./ImageConverter-darwin-x86_64.tar.gz $GITHUB_TOKEN
+          tar -czvf Springbok-darwin-x86_64.tar.gz Springbok.app
+          ./.github/workflows/upload_asset.sh ./Springbok-darwin-x86_64.tar.gz $GITHUB_TOKEN
   macos-aarch:
     runs-on: macos-latest
     steps:
@@ -40,9 +40,9 @@ jobs:
           uname -v
           cargo build --release --target=aarch64-apple-darwin
           mv ./target/aarch64-apple-darwin/release/springbok ./macos/Contents/MacOS/
-          mv ./macos ./ImageConverter.app
-          tar -czvf ImageConverter-darwin-aarch64.tar.gz ImageConverter.app
-          ./.github/workflows/upload_asset.sh ./ImageConverter-darwin-aarch64.tar.gz $GITHUB_TOKEN
+          mv ./macos ./Springbok.app
+          tar -czvf Springbok-darwin-aarch64.tar.gz Springbok.app
+          ./.github/workflows/upload_asset.sh ./Springbok-darwin-aarch64.tar.gz $GITHUB_TOKEN
         
 
   windows:
