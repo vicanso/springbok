@@ -83,8 +83,9 @@ impl ImageFile {
             -1 => "✗",
             _ => "✓",
         };
+        let saving_value = self.saving.load(Ordering::Relaxed);
         let saving = if status == STATUS_DONE {
-            format!("{}%", self.saving.load(Ordering::Relaxed))
+            format!("{}%", saving_value)
         } else {
             "".to_string()
         };
@@ -95,6 +96,14 @@ impl ImageFile {
         } else {
             format!("{:.5}", diff as f64 / TEN_THOUSANDS)
         };
+
+        let smaller = if saving_value < -5 {
+            "0"
+        } else if saving_value > 5 {
+            "1"
+        } else {
+            ""
+        };
         vec![
             index_str.to_string(),
             status_str.to_string(),
@@ -102,6 +111,7 @@ impl ImageFile {
             ByteSize(size).to_string(),
             saving,
             diff_str,
+            smaller.to_string(),
         ]
     }
 }
