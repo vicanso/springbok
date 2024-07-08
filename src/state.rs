@@ -21,8 +21,6 @@ pub enum Error {
     Pattern { source: PatternError },
     #[snafu(display("Io: {source}"))]
     Io { source: std::io::Error },
-    #[snafu(display("Lock fail: {message}"))]
-    Lock { message: String },
     #[snafu(display("State is not initialized"))]
     Init {},
     #[snafu(display("Image: {source}"))]
