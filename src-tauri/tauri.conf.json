@@ -4,15 +4,17 @@
   "version": "0.1.0",
   "identifier": "com.bigtree.springbok",
   "build": {
-    "beforeDevCommand": "yarn dev",
+    "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "yarn build",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "springbok",
+        "dragDropEnabled": true,
         "width": 800,
         "height": 600
       }

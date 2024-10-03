@@ -7,7 +7,10 @@ fmt:
 	cd src-tauri
 	cargo fmt --all --
 dev:
-	yarn tauri dev
+	npm run tauri dev
+dev-web:
+	npm run dev
+
 release:
 	cargo build --release
 macos:
