@@ -22,9 +22,10 @@ interface File {
 interface FiletreeState {
   files: File[];
   processing: boolean;
+  clean: () => void;
   mock: () => void;
-  optim: () => void;
-  start: () => void;
+  optim: (qualities: Record<string, number>) => void;
+  start: (qualities: Record<string, number>) => void;
   reset: () => void;
   restore: (hash: string, file: string) => Promise<void>;
   add: (...files: string[]) => void;
@@ -110,10 +111,10 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
       };
     });
   },
-  start: () => {
+  start: (qualities: Record<string, number>) => {
     const { processing, optim } = get();
     if (!processing) {
-      optim();
+      optim(qualities);
     }
   },
   restore: async (hash: string, file: string) => {
@@ -146,7 +147,7 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
       files,
     });
   },
-  optim: () => {
+  optim: (qualities: Record<string, number>) => {
     const { files } = get();
     const index = files.findIndex((item) => item.status === Status.Pending);
     if (index === -1) {
@@ -161,7 +162,7 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
       processing: true,
       files,
     });
-    imageOptimize(file.path)
+    imageOptimize(file.path, qualities)
       .then((data) => {
         file.size = data.size;
         file.savings = 1 - data.size / data.original_size;
@@ -185,7 +186,7 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
         set({
           files,
         });
-        get().optim();
+        get().optim(qualities);
       });
   },
 }));

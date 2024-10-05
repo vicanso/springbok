@@ -1,11 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getFileExt } from "@/helpers/utils";
 
-export async function imageOptimize(file: string) {
+export async function imageOptimize(
+  file: string,
+  qualities: Record<string, number>,
+) {
   let format = getFileExt(file);
   if (format === "jpg") {
     format = "jpeg";
   }
+  const quality = qualities[format] || 90;
   const result: {
     diff: number;
     hash: string;
@@ -13,8 +17,7 @@ export async function imageOptimize(file: string) {
     original_size: number;
   } = await invoke("image_optimize", {
     file,
-    // TODO get from local storage
-    quality: 90,
+    quality,
     format,
   });
   return result;

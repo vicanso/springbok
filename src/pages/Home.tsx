@@ -18,6 +18,7 @@ import {
   formatSize,
   formatSavings,
   isWebMode,
+  getFileExt,
 } from "@/helpers/utils";
 import {
   Tooltip,
@@ -26,6 +27,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import useFiletreeState, { Status } from "@/states/filetree";
+import useSettingSate from "@/states/setting";
 import { useEffect } from "react";
 import { useI18n } from "@/i18n";
 
@@ -68,13 +70,33 @@ export default function Home() {
   const savingsClass = "text-right w-[80px] pr-3";
   const diffClass = "text-right w-[60px] pr-3";
   const homeI18n = useI18n("home");
+  const { getQualities, getSupportFormats } = useSettingSate();
   const { files, processing, mock, add, start, restore, reset, clean } =
     useFiletreeState();
-  useEffect(() => {
-    const unlisten = listenDragDrop((files: string[]) => {
-      add(...files);
-      start();
+
+  const handleSelectFiles = (files: string[]) => {
+    const folders: string[] = [];
+    const images: string[] = [];
+    const formats = getSupportFormats();
+    files.forEach((item) => {
+      const ext = getFileExt(item);
+      if (!ext) {
+        folders.push(item);
+        return;
+      }
+      if (formats.includes(ext)) {
+        images.push(item);
+      }
     });
+
+    if (images.length !== 0) {
+      add(...images);
+      start(getQualities());
+    }
+  };
+
+  useEffect(() => {
+    const unlisten = listenDragDrop(handleSelectFiles);
     return unlisten;
   }, []);
 
@@ -190,7 +212,7 @@ export default function Home() {
                   return;
                 }
                 reset();
-                start();
+                start(getQualities());
               }}
             >
               <RotateCw className="mr-2 h-4 w-4" /> {homeI18n("again")}
