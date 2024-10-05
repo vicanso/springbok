@@ -3960,6 +3960,7 @@ name = "springbok"
 version = "0.1.0"
 dependencies = [
  "blake3",
+ "glob",
  "imageoptimize",
  "once_cell",
  "serde",

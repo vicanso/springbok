@@ -4,6 +4,7 @@ interface Setting {
   supportFormats: string[];
   pngQuality: number;
   jpegQuality: number;
+  avifQuality: number;
 }
 
 const key = "springbok.settings";
@@ -17,6 +18,7 @@ function getSetting() {
     supportFormats: ["png", "jpeg"],
     pngQuality: 80,
     jpegQuality: 90,
+    avifQuality: 70,
   };
   const data = localStorage.getItem(key);
   try {
@@ -32,7 +34,6 @@ function getSetting() {
 interface SettingState {
   setting: Setting;
   getQualities: () => Record<string, number>;
-  getSupportFormats: () => string[];
   updateSupportFormats: (supportFormats: string[]) => void;
   updateQuality: (format: string, quality: number) => void;
 }
@@ -43,17 +44,11 @@ const settingState = create<SettingState>()((set, get) => ({
     const { setting } = get();
     const qualities: Record<string, number> = {
       png: setting.pngQuality,
-      jpeg: setting.jpegQuality,
+      jpeg: setting.avifQuality,
+      avif: setting.avifQuality,
     };
+
     return qualities;
-  },
-  getSupportFormats: () => {
-    const { setting } = get();
-    const formats = setting.supportFormats.slice(0);
-    if (formats.includes("jpeg")) {
-      formats.push("jpg");
-    }
-    return formats;
   },
   updateSupportFormats: (supportFormats: string[]) => {
     const { setting } = get();

@@ -11,6 +11,9 @@ dev:
 dev-web:
 	npm run dev
 
+icon:
+	cargo tauri icon ./springbok.png
+
 release:
 	cargo tauri build --no-bundle
 bundles:

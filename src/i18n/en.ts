@@ -7,5 +7,6 @@ export default {
     again: "Again",
     dragDropTips: "Drag and drop image files onto the area above",
     clean: "Clean All Files",
+    notSupported: "Not Supported",
   },
 };

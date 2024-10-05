@@ -34,6 +34,7 @@ pub fn run() {
             commands::close_splashscreen,
             commands::image_optimize,
             commands::restore_file,
+            commands::list_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

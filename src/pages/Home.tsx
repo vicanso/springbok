@@ -8,6 +8,7 @@ import {
   Info,
   Undo2,
   X,
+  ShieldAlert,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,6 @@ import {
   formatSize,
   formatSavings,
   isWebMode,
-  getFileExt,
 } from "@/helpers/utils";
 import {
   Tooltip,
@@ -31,7 +31,11 @@ import useSettingSate from "@/states/setting";
 import { useEffect } from "react";
 import { useI18n } from "@/i18n";
 
-const formatStatus = (status: Status, message?: string) => {
+const formatStatus = (
+  i18n: (key: string) => string,
+  status: Status,
+  message?: string,
+) => {
   const iconClass = "h-4 w-4 mt-3";
   switch (status) {
     case Status.Processing: {
@@ -57,6 +61,20 @@ const formatStatus = (status: Status, message?: string) => {
     case Status.NotModified: {
       return <Check className={cn("", iconClass)} />;
     }
+    case Status.NotSupported: {
+      return (
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <ShieldAlert className={cn("cursor-pointer", iconClass)} />
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{i18n("notSupported")}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
     default: {
       return <span>...</span>;
     }
@@ -70,28 +88,16 @@ export default function Home() {
   const savingsClass = "text-right w-[80px] pr-3";
   const diffClass = "text-right w-[60px] pr-3";
   const homeI18n = useI18n("home");
-  const { getQualities, getSupportFormats } = useSettingSate();
+  const { getQualities } = useSettingSate();
   const { files, processing, mock, add, start, restore, reset, clean } =
     useFiletreeState();
 
-  const handleSelectFiles = (files: string[]) => {
-    const folders: string[] = [];
-    const images: string[] = [];
-    const formats = getSupportFormats();
-    files.forEach((item) => {
-      const ext = getFileExt(item);
-      if (!ext) {
-        folders.push(item);
-        return;
-      }
-      if (formats.includes(ext)) {
-        images.push(item);
-      }
-    });
-
-    if (images.length !== 0) {
-      add(...images);
+  const handleSelectFiles = async (files: string[]) => {
+    try {
+      await add(...files);
       start(getQualities());
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -144,7 +150,7 @@ export default function Home() {
       <div className={cn("flex h-10 leading-10", itemClass)} key={item.path}>
         <div className={cn("flex-none", statusClass)}>
           <div className="float-end">
-            {formatStatus(item.status, item.message)}
+            {formatStatus(homeI18n, item.status, item.message)}
           </div>
         </div>
         <div className={cn("grow relative", fileClass)}>

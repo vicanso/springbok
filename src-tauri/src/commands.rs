@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::utils;
+use glob::{glob, PatternError};
 use imageoptimize::{run, PROCESS_DIFF, PROCESS_LOAD, PROCESS_OPTIM};
 use serde::Serialize;
 use snafu::{ResultExt, Snafu};
@@ -22,12 +23,14 @@ use tokio::fs;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display("Optimize processing error {source:?}"))]
+    #[snafu(display("Optimize processing error: {source:?}"))]
     OptimizeProcessing {
         source: imageoptimize::ImageProcessingError,
     },
-    #[snafu(display("Io error {source:?}"))]
+    #[snafu(display("Io error: {source:?}"))]
     Io { source: std::io::Error },
+    #[snafu(display("Glob error: {source}"))]
+    Pattern { source: PatternError },
 }
 impl serde::Serialize for Error {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -37,6 +40,7 @@ impl serde::Serialize for Error {
         let (category, message) = match self {
             Error::OptimizeProcessing { source } => ("optim".to_string(), source.to_string()),
             Error::Io { source } => ("io".to_string(), source.to_string()),
+            Error::Pattern { source } => ("pattern".to_string(), source.to_string()),
         };
         let json =
             r#"{"category": ""#.to_string() + &category + r#"", "message": ""# + &message + r#""}"#;
@@ -124,4 +128,21 @@ pub async fn restore_file(hash: String, file: String) -> Result<u64> {
         .await
         .context(IoSnafu)?;
     Ok(size)
+}
+
+#[command(async)]
+pub async fn list_file(folders: Vec<String>, exts: Vec<String>) -> Result<Vec<String>> {
+    let mut entry_list = vec![];
+    let mut file_paths = vec![];
+    for dir in folders.iter() {
+        for ext in exts.iter() {
+            file_paths.push(format!(r#"{dir}/**/*.{ext}"#));
+        }
+    }
+    for file_path in file_paths.iter() {
+        for entry in glob(file_path).context(PatternSnafu {})?.flatten() {
+            entry_list.push(entry.to_string_lossy().to_string());
+        }
+    }
+    Ok(entry_list)
 }

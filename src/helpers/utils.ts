@@ -91,7 +91,7 @@ export const formatDiff = (diff: number) => {
   if (diff < 0) {
     return "";
   }
-  if (diff < 1) {
+  if (diff < 10) {
     return diff.toFixed(2);
   }
   if (diff > 100) {

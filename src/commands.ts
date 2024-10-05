@@ -9,7 +9,7 @@ export async function imageOptimize(
   if (format === "jpg") {
     format = "jpeg";
   }
-  const quality = qualities[format] || 90;
+  const quality = qualities[format] || 80;
   const result: {
     diff: number;
     hash: string;
@@ -29,4 +29,12 @@ export async function restoreFile(hash: string, file: string) {
     file,
   });
   return size;
+}
+
+export async function listFile(folders: string[], exts: string[]) {
+  const files: string[] = await invoke("list_file", {
+    folders,
+    exts,
+  });
+  return files;
 }

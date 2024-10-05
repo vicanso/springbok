@@ -1,5 +1,5 @@
-import { imageOptimize, restoreFile } from "@/commands";
-import { formatError } from "@/helpers/utils";
+import { imageOptimize, listFile, restoreFile } from "@/commands";
+import { formatError, getFileExt } from "@/helpers/utils";
 import { create } from "zustand";
 
 export enum Status {
@@ -8,6 +8,7 @@ export enum Status {
   NotModified,
   Success,
   Fail,
+  NotSupported,
 }
 interface File {
   status: Status;
@@ -28,7 +29,7 @@ interface FiletreeState {
   start: (qualities: Record<string, number>) => void;
   reset: () => void;
   restore: (hash: string, file: string) => Promise<void>;
-  add: (...files: string[]) => void;
+  add: (...files: string[]) => Promise<void>;
 }
 
 const filetreeState = create<FiletreeState>()((set, get) => ({
@@ -86,7 +87,29 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
     });
     return true;
   },
-  add: (...files: string[]) => {
+  add: async (...items: string[]) => {
+    // filter folder and file
+    // only support decode jpeg png
+    const formats = ["png", "jpg", "jpeg"];
+    const files: string[] = [];
+    const folders: string[] = [];
+    const others: string[] = [];
+    items.forEach((item) => {
+      const ext = getFileExt(item);
+      if (!ext) {
+        folders.push(item);
+        return;
+      }
+      if (!formats.includes(ext)) {
+        others.push(item);
+      }
+      files.push(item);
+    });
+    if (folders.length !== 0) {
+      const data = await listFile(folders, formats);
+      files.push(...data);
+    }
+
     set((state) => {
       const exists: Record<string, boolean> = {};
       state.files.forEach((item) => {
@@ -97,13 +120,17 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
         if (exists[path]) {
           return;
         }
-        arr.push({
+        const file = {
           status: Status.Pending,
           path,
           size: -1,
           savings: -1,
           diff: -1,
-        });
+        };
+        if (others.includes(path)) {
+          file.status = Status.NotSupported;
+        }
+        arr.push(file);
       });
       state.files.push(...arr);
       return {
