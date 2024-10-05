@@ -1,6 +1,14 @@
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Plus, RotateCw, Check, LoaderCircle, Info, Undo2 } from "lucide-react";
+import {
+  Plus,
+  RotateCw,
+  Check,
+  LoaderCircle,
+  Info,
+  Undo2,
+  X,
+} from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import {
@@ -19,6 +27,7 @@ import {
 } from "@/components/ui/tooltip";
 import useFiletreeState, { Status } from "@/states/filetree";
 import { useEffect } from "react";
+import { useI18n } from "@/i18n";
 
 const formatStatus = (status: Status, message?: string) => {
   const iconClass = "h-4 w-4 mt-3";
@@ -58,7 +67,9 @@ export default function Home() {
   const sizeClass = "text-right w-[90px] pr-3";
   const savingsClass = "text-right w-[80px] pr-3";
   const diffClass = "text-right w-[60px] pr-3";
-  const { files, processing, mock, add, start, restore } = useFiletreeState();
+  const homeI18n = useI18n("home");
+  const { files, processing, mock, add, start, restore, reset, clean } =
+    useFiletreeState();
   useEffect(() => {
     const unlisten = listenDragDrop((files: string[]) => {
       add(...files);
@@ -71,13 +82,13 @@ export default function Home() {
     <div className="flex h-8 leading-8">
       <div className={cn("flex-none", statusClass)}>--</div>
       <Separator orientation="vertical" className="my-2 h-4" />
-      <div className={cn("grow", fileClass)}>File</div>
+      <div className={cn("grow", fileClass)}>{homeI18n("file")}</div>
       <Separator orientation="vertical" className="my-2 h-4" />
-      <div className={cn("flex-none", sizeClass)}>Size</div>
+      <div className={cn("flex-none", sizeClass)}>{homeI18n("size")}</div>
       <Separator orientation="vertical" className="my-2 h-4" />
-      <div className={cn("flex-none", savingsClass)}>Savings</div>
+      <div className={cn("flex-none", savingsClass)}>{homeI18n("savings")}</div>
       <Separator orientation="vertical" className="my-2 h-4" />
-      <div className={cn("flex-none", diffClass)}>Diff</div>
+      <div className={cn("flex-none", diffClass)}>{homeI18n("diff")}</div>
     </div>
   );
   const items = files.map((item, index) => {
@@ -151,10 +162,23 @@ export default function Home() {
             >
               <Plus className="h-4 w-4" />
             </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 ml-1"
+              title={homeI18n("clean")}
+              disabled={processing}
+              onClick={() => {
+                clean();
+              }}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
           <div className="grow h-8 text-muted-foreground text-xs leading-8">
-            Drag and drop image files onto the area above
+            {homeI18n("dragDropTips")}
           </div>
+
           <div className="flex-none h-8 mx-2">
             <Button
               variant="outline"
@@ -165,9 +189,11 @@ export default function Home() {
                   mock();
                   return;
                 }
+                reset();
+                start();
               }}
             >
-              <RotateCw className="mr-2 h-4 w-4" /> Again
+              <RotateCw className="mr-2 h-4 w-4" /> {homeI18n("again")}
             </Button>
           </div>
         </div>

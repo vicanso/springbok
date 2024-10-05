@@ -25,7 +25,8 @@ interface FiletreeState {
   mock: () => void;
   optim: () => void;
   start: () => void;
-  restore: (hash: string, file: string) => Promise<number>;
+  reset: () => void;
+  restore: (hash: string, file: string) => Promise<void>;
   add: (...files: string[]) => void;
 }
 
@@ -129,6 +130,21 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
         files,
       });
     }
+  },
+  reset: () => {
+    const { files } = get();
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      file.status = Status.Pending;
+      file.size = -1;
+      file.savings = -1;
+      file.diff = -1;
+      file.message = "";
+      file.hash = "";
+    }
+    set({
+      files,
+    });
   },
   optim: () => {
     const { files } = get();
