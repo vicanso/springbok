@@ -4,7 +4,7 @@ import { eol } from "@tauri-apps/plugin-os";
 type DropFilesEventCallback = (files: string[]) => void;
 
 export function isWebMode() {
-  return !window.__TAURI__;
+  return !window.hasOwnProperty("__TAURI__");
 }
 
 const dropFilesEventCallbacks: DropFilesEventCallback[] = [];

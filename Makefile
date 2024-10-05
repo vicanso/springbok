@@ -12,7 +12,6 @@ dev-web:
 	npm run dev
 
 release:
-	cargo tauri build
-macos:
-	mv ./target/release/springbok ./macos/Contents/MacOS/
-	mv ./macos ./Springbok.app
+	cargo tauri build --no-bundle
+bundles:
+	cargo tauri build --bundles app,dmg

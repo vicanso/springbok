@@ -25,7 +25,8 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.26.2",
     "tailwind-merge": "^2.5.2",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zustand": "^5.0.0-rc.2"
   },
   "devDependencies": {
     "@tauri-apps/cli": ">=2.0.0-rc.0",

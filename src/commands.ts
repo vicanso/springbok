@@ -19,3 +19,11 @@ export async function imageOptimize(file: string) {
   });
   return result;
 }
+
+export async function restoreFile(hash: string, file: string) {
+  const size: number = await invoke("restore_file", {
+    hash,
+    file,
+  });
+  return size;
+}

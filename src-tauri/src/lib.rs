@@ -32,7 +32,8 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
             commands::close_splashscreen,
-            commands::image_optimize
+            commands::image_optimize,
+            commands::restore_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -16,6 +16,7 @@ use crate::utils;
 use imageoptimize::{run, PROCESS_DIFF, PROCESS_LOAD, PROCESS_OPTIM};
 use serde::Serialize;
 use snafu::{ResultExt, Snafu};
+use std::path::PathBuf;
 use tauri::{command, Manager, Window};
 use tokio::fs;
 
@@ -64,6 +65,10 @@ pub struct ImageOptimizeResult {
     pub original_size: usize,
 }
 
+fn get_backup_file(hash: &str) -> PathBuf {
+    utils::get_app_cache_dir().join(format!("{hash}.bak"))
+}
+
 #[command(async)]
 pub async fn image_optimize(
     file: String,
@@ -94,7 +99,7 @@ pub async fn image_optimize(
         });
     }
     let mut hash = blake3::hash(&buf).to_hex().to_string();
-    let backup = utils::get_app_cache_dir().join(format!("{hash}.bak"));
+    let backup = get_backup_file(&hash);
     if !backup.exists() {
         // ignore error
         if let Err(e) = fs::write(backup, buf).await {
@@ -111,4 +116,12 @@ pub async fn image_optimize(
         original_size,
         size: image_buffer.len(),
     })
+}
+
+#[command(async)]
+pub async fn restore_file(hash: String, file: String) -> Result<u64> {
+    let size = fs::copy(get_backup_file(&hash), file)
+        .await
+        .context(IoSnafu)?;
+    Ok(size)
 }

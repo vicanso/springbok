@@ -1,42 +1,24 @@
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Plus, RotateCw, Check, LoaderCircle, Info } from "lucide-react";
+import { Plus, RotateCw, Check, LoaderCircle, Info, Undo2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
 import {
   listenDragDrop,
   formatDiff,
   formatFile,
   formatSize,
   formatSavings,
-  formatError,
   isWebMode,
 } from "@/helpers/utils";
-import { imageOptimize } from "@/commands";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-enum Status {
-  Pending = 0,
-  Processing,
-  NotModified,
-  Success,
-  Fail,
-}
-interface File {
-  status: Status;
-  path: string;
-  size: number;
-  savings: number;
-  diff: number;
-  message?: string;
-  hash?: string;
-}
+import useFiletreeState, { Status } from "@/states/filetree";
+import { useEffect } from "react";
 
 const formatStatus = (status: Status, message?: string) => {
   const iconClass = "h-4 w-4 mt-3";
@@ -76,101 +58,11 @@ export default function Home() {
   const sizeClass = "text-right w-[90px] pr-3";
   const savingsClass = "text-right w-[80px] pr-3";
   const diffClass = "text-right w-[60px] pr-3";
-  const [files, setFiles] = useState([] as File[]);
-  const [processing, setProcessing] = useState(false);
-  if (isWebMode()) {
-    setTimeout(() => {
-      setFiles([
-        {
-          status: Status.Pending,
-          path: "~/Downloads/pending.png",
-          size: -1,
-          savings: -1,
-          diff: -1,
-        },
-        {
-          status: Status.Processing,
-          path: "~/Downloads/processing.png",
-          size: -1,
-          savings: -1,
-          diff: -1,
-        },
-        {
-          status: Status.NotModified,
-          path: "~/Downloads/favicon.png",
-          size: 5181,
-          savings: 0,
-          diff: 0,
-        },
-        {
-          status: Status.Success,
-          path: "~/Downloads/icon.png",
-          size: 5181,
-          savings: 0.123,
-          diff: 0.001,
-          hash: "blake3",
-        },
-        {
-          status: Status.Fail,
-          message: "Fail",
-          path: "~/Downloads/pingap.png",
-          size: 1023,
-          savings: -1,
-          diff: 0.012,
-        },
-      ]);
-    });
-  }
-
-  const doOptimize = (optimizeFiles: File[]) => {
-    const index = optimizeFiles.findIndex((item) => item.status === 0);
-    if (index === -1) {
-      setProcessing(false);
-      return;
-    }
-    const file = optimizeFiles[index];
-    file.status = Status.Processing;
-    setFiles(optimizeFiles);
-    imageOptimize(file.path)
-      .then((data) => {
-        file.size = data.size;
-        file.savings = 1 - data.size / data.original_size;
-        if (file.savings > 0) {
-          file.status = Status.Success;
-        } else {
-          file.status = Status.NotModified;
-        }
-        file.diff = data.diff;
-        file.hash = data.hash;
-      })
-      .catch((err) => {
-        const data = formatError(err);
-        file.status = Status.Fail;
-        file.message = `${data.message}[${data.category}]`;
-      })
-      .finally(() => {
-        setFiles(optimizeFiles);
-        doOptimize(optimizeFiles);
-      });
-  };
-
+  const { files, processing, mock, add, start, restore } = useFiletreeState();
   useEffect(() => {
     const unlisten = listenDragDrop((files: string[]) => {
-      if (processing) {
-        return;
-      }
-      const arr: File[] = files.map((path) => {
-        return {
-          status: Status.Pending,
-          path,
-          size: -1,
-          savings: -1,
-          diff: -1,
-        };
-      });
-      setFiles(arr);
-      setProcessing(true);
-      doOptimize(arr);
+      add(...files);
+      start();
     });
     return unlisten;
   }, []);
@@ -193,6 +85,27 @@ export default function Home() {
     if (index % 2 === 1) {
       itemClass = "bg-muted/50";
     }
+    let undo = <></>;
+    if (item.hash) {
+      undo = (
+        <Button
+          key="restoreImage"
+          size="icon"
+          variant="ghost"
+          className="h-10 w-10"
+          title="Restore the original image"
+          onClick={async () => {
+            try {
+              await restore(item.hash || "", item.path);
+            } catch (err) {
+              console.error(err);
+            }
+          }}
+        >
+          <Undo2 className="h-4 w-4" />
+        </Button>
+      );
+    }
 
     return (
       <div className={cn("flex h-10 leading-10", itemClass)} key={item.path}>
@@ -202,6 +115,7 @@ export default function Home() {
           </div>
         </div>
         <div className={cn("grow relative", fileClass)}>
+          <div className="absolute right-0">{undo}</div>
           {formatFile(item.path)}
         </div>
         <div className={cn("flex-none", sizeClass)}>
@@ -242,7 +156,17 @@ export default function Home() {
             Drag and drop image files onto the area above
           </div>
           <div className="flex-none h-8 mx-2">
-            <Button variant="outline" size="sm" disabled={processing}>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={processing}
+              onClick={() => {
+                if (isWebMode()) {
+                  mock();
+                  return;
+                }
+              }}
+            >
               <RotateCw className="mr-2 h-4 w-4" /> Again
             </Button>
           </div>
