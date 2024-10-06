@@ -183,8 +183,8 @@ export default function Home() {
           )}
           {items.length === 0 && (
             <div className="absolute top-[50%] mt-[-40px] left-[50%] ml-[-40px]">
-              <div className="border-2 p-[20px] rounded-md">
-                <Download className="text-muted-foreground w-[60px] h-[60px]" />
+              <div className="border-2 p-[30px] rounded-md">
+                <Download className="text-muted-foreground w-[40px] h-[40px]" />
               </div>
             </div>
           )}

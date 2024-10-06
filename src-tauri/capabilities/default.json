@@ -5,6 +5,8 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "core:window:allow-set-size",
+    "core:window:allow-center",
     "shell:allow-open"
   ]
 }

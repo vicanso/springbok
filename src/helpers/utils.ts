@@ -1,5 +1,6 @@
 import { listen, TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
 import { eol } from "@tauri-apps/plugin-os";
+import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 
 type DropFilesEventCallback = (files: string[]) => void;
 
@@ -8,6 +9,48 @@ export function isWebMode() {
 }
 
 const dropFilesEventCallbacks: DropFilesEventCallback[] = [];
+interface WindowSize {
+  width: number;
+  height: number;
+}
+
+const windowSizeKey = "springbok.windowSize";
+
+function getWindowSize() {
+  const data = localStorage.getItem(windowSizeKey);
+  if (!data) {
+    return;
+  }
+  try {
+    const size: WindowSize = JSON.parse(data);
+    return size;
+  } catch (err) {
+    console.dir(err);
+  }
+}
+
+export async function initWindow() {
+  if (isWebMode()) {
+    return;
+  }
+  const win = getCurrentWindow();
+  const scale = await win.scaleFactor();
+  const size = getWindowSize();
+  if (size) {
+    await win.setSize(new LogicalSize(size.width, size.height));
+    await win.center();
+  }
+  win.onResized((event) => {
+    const size = event.payload.toLogical(scale);
+    localStorage.setItem(
+      windowSizeKey,
+      JSON.stringify({
+        width: size.width,
+        height: size.height,
+      }),
+    );
+  });
+}
 
 export function formatError(err: unknown) {
   let category = "unkown";
