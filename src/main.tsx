@@ -14,13 +14,18 @@
 // );
 
 import { StrictMode } from "react";
-
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import "./index.css";
-import { initListenDragDrop } from "./helpers/utils";
+import "@/index.css";
+import { initListenDragDrop } from "@/helpers/utils";
+import { closeSplashscreen, showSplashscreen } from "@/commands";
 
-initListenDragDrop()
+let showSplashTime: number;
+showSplashscreen()
+  .then(() => {
+    showSplashTime = Date.now();
+    return initListenDragDrop();
+  })
   .then(() => {
     createRoot(document.getElementById("root")!).render(
       <StrictMode>
@@ -31,4 +36,11 @@ initListenDragDrop()
   .catch((err) => {
     // todo tauri error
     console.error(err);
+  })
+  .finally(() => {
+    let ms = 300 - (Date.now() - showSplashTime);
+    if (ms < 0) {
+      ms = 0;
+    }
+    setTimeout(closeSplashscreen, ms);
   });

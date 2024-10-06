@@ -32,6 +32,7 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .invoke_handler(tauri::generate_handler![
             commands::close_splashscreen,
+            commands::show_splashscreen,
             commands::image_optimize,
             commands::restore_file,
             commands::list_file,

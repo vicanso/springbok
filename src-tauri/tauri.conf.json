@@ -16,7 +16,19 @@
         "title": "springbok",
         "dragDropEnabled": true,
         "width": 800,
-        "height": 600
+        "height": 600,
+        "visible": false
+      },
+      {
+        "theme": "Dark",
+        "width": 600,
+        "height": 370,
+        "resizable": false,
+        "decorations": false,
+        "center": true,
+        "visible": false,
+        "url": "splashscreen.html",
+        "label": "splashscreen"
       }
     ],
     "security": {

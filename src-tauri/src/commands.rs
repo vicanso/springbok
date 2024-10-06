@@ -61,6 +61,15 @@ pub fn close_splashscreen(window: Window) {
     window.get_webview_window("main").unwrap().show().unwrap();
 }
 
+#[command]
+pub fn show_splashscreen(window: Window) {
+    window
+        .get_webview_window("splashscreen")
+        .unwrap()
+        .show()
+        .unwrap();
+}
+
 #[derive(Debug, Default, Serialize)]
 pub struct ImageOptimizeResult {
     pub diff: f64,

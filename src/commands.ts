@@ -1,5 +1,18 @@
 import { invoke } from "@tauri-apps/api/core";
-import { getFileExt } from "@/helpers/utils";
+import { getFileExt, isWebMode } from "@/helpers/utils";
+
+export async function showSplashscreen() {
+  if (isWebMode()) {
+    return;
+  }
+  await invoke("show_splashscreen");
+}
+export async function closeSplashscreen() {
+  if (isWebMode()) {
+    return;
+  }
+  await invoke("close_splashscreen");
+}
 
 export async function imageOptimize(
   file: string,
