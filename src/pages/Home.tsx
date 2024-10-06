@@ -9,6 +9,8 @@ import {
   Undo2,
   X,
   ShieldAlert,
+  Ellipsis,
+  Download,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -30,6 +32,7 @@ import useFiletreeState, { Status } from "@/states/filetree";
 import useSettingSate from "@/states/setting";
 import { useEffect } from "react";
 import { useI18n } from "@/i18n";
+import { goToSetting } from "@/routers";
 
 const formatStatus = (
   i18n: (key: string) => string,
@@ -175,7 +178,16 @@ export default function Home() {
         {tab}
         <Separator />
         <div className="fixed bottom-[52px] top-[32px] left-0 right-0 leading-loose overflow-hidden">
-          <ScrollArea className="h-full">{items}</ScrollArea>
+          {items.length !== 0 && (
+            <ScrollArea className="h-full">{items}</ScrollArea>
+          )}
+          {items.length === 0 && (
+            <div className="absolute top-[50%] mt-[-40px] left-[50%] ml-[-40px]">
+              <div className="border-2 p-[20px] rounded-md">
+                <Download className="text-muted-foreground w-[60px] h-[60px]" />
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <div className="fixed bottom-0 left-0 right-0 leading-loose">
@@ -202,11 +214,21 @@ export default function Home() {
             >
               <X className="h-4 w-4" />
             </Button>
+            <Button
+              variant="outline"
+              className="h-8 w-8 ml-1"
+              size="icon"
+              disabled={processing}
+              onClick={() => {
+                goToSetting();
+              }}
+            >
+              <Ellipsis className="h-4 w-4" />
+            </Button>
           </div>
           <div className="grow h-8 text-muted-foreground text-xs leading-8">
             {homeI18n("dragDropTips")}
           </div>
-
           <div className="flex-none h-8 mx-2">
             <Button
               variant="outline"

@@ -16,7 +16,7 @@ function saveSetting(setting: Setting) {
 function getSetting() {
   const defaultSetting: Setting = {
     supportFormats: ["png", "jpeg"],
-    pngQuality: 80,
+    pngQuality: 90,
     jpegQuality: 90,
     avifQuality: 70,
   };
@@ -33,6 +33,8 @@ function getSetting() {
 
 interface SettingState {
   setting: Setting;
+  isSupportedFormat: (format: string) => boolean;
+  toggleSupportedFormat: (format: string) => void;
   getQualities: () => Record<string, number>;
   updateSupportFormats: (supportFormats: string[]) => void;
   updateQuality: (format: string, quality: number) => void;
@@ -40,6 +42,22 @@ interface SettingState {
 
 const settingState = create<SettingState>()((set, get) => ({
   setting: getSetting(),
+  isSupportedFormat: (format: string) => {
+    return get().setting.supportFormats.includes(format);
+  },
+  toggleSupportedFormat: (format: string) => {
+    const { setting } = get();
+    const index = setting.supportFormats.indexOf(format);
+    if (index >= 0) {
+      setting.supportFormats.splice(index, 1);
+    } else {
+      setting.supportFormats.push(format);
+    }
+    saveSetting(setting);
+    set({
+      setting,
+    });
+  },
   getQualities: () => {
     const { setting } = get();
     const qualities: Record<string, number> = {
@@ -47,7 +65,6 @@ const settingState = create<SettingState>()((set, get) => ({
       jpeg: setting.avifQuality,
       avif: setting.avifQuality,
     };
-
     return qualities;
   },
   updateSupportFormats: (supportFormats: string[]) => {
@@ -63,6 +80,10 @@ const settingState = create<SettingState>()((set, get) => ({
     switch (format) {
       case "png": {
         setting.pngQuality = quality || 80;
+        break;
+      }
+      case "avif": {
+        setting.avifQuality = quality || 70;
         break;
       }
       default: {
