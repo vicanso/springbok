@@ -11,6 +11,7 @@ export default {
     dragDropTips: "拖动图片文件至以上区域放开",
     clean: "清除",
     notSupported: "暂未支持",
+    selectImageFail: "选择图片失败",
   },
   setting: {
     supportImages: "支持的图片格式",

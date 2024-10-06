@@ -11,6 +11,7 @@ export default {
     dragDropTips: "Drag and drop image files onto the area above",
     clean: "Clean All Files",
     notSupported: "Not Supported",
+    selectImageFail: "Select Image Fail",
   },
   setting: {
     supportImages: "Support Images",

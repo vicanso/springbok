@@ -21,6 +21,7 @@ import {
   formatSize,
   formatSavings,
   isWebMode,
+  formatError,
 } from "@/helpers/utils";
 import {
   Tooltip,
@@ -33,6 +34,8 @@ import useSettingSate from "@/states/setting";
 import { useEffect } from "react";
 import { useI18n } from "@/i18n";
 import { goToSetting } from "@/routers";
+import { useToast } from "@/hooks/use-toast";
+import { open } from "@tauri-apps/plugin-dialog";
 
 const formatStatus = (
   i18n: (key: string) => string,
@@ -91,11 +94,15 @@ export default function Home() {
   const savingsClass = "text-right w-[80px] pr-3";
   const diffClass = "text-right w-[60px] pr-3";
   const homeI18n = useI18n("home");
-  const { getQualities } = useSettingSate();
+  const { toast } = useToast();
+  const { getQualities, setting } = useSettingSate();
   const { files, processing, mock, add, start, restore, reset, clean } =
     useFiletreeState();
 
-  const handleSelectFiles = async (files: string[]) => {
+  const handleSelectFiles = async (files: string[] | null) => {
+    if (!files || files.length === 0) {
+      return;
+    }
     try {
       await add(...files);
       start(getQualities());
@@ -199,6 +206,29 @@ export default function Home() {
               size="icon"
               className="h-8 w-8"
               disabled={processing}
+              onClick={() => {
+                const formats = setting.supportFormats.slice(0);
+                if (formats.includes("jpeg")) {
+                  formats.push("jpg");
+                }
+                open({
+                  multiple: true,
+                  filters: [
+                    {
+                      name: "Image Filter",
+                      extensions: formats,
+                    },
+                  ],
+                })
+                  .then(handleSelectFiles)
+                  .catch((err) => {
+                    console.error(err);
+                    toast({
+                      title: homeI18n("selectImageFail"),
+                      description: formatError(err).message,
+                    });
+                  });
+              }}
             >
               <Plus className="h-4 w-4" />
             </Button>
