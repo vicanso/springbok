@@ -22,6 +22,7 @@ jobs:
 
     runs-on: ${{ matrix.platform }}
     steps:
+      - uses: ilammy/setup-nasm@v1
       - uses: actions/checkout@v4
 
       - name: setup node
