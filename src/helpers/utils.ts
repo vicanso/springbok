@@ -33,6 +33,10 @@ export async function initWindow() {
   if (isWebMode()) {
     return;
   }
+  // 避免发布版本可以reload页面
+  if (window.location.protocol.includes("tauri")) {
+    document.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
   const win = getCurrentWindow();
   const scale = await win.scaleFactor();
   const size = getWindowSize();
