@@ -1,7 +1,10 @@
-# Tauri + React + Typescript
+# springbok
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+![springbok](./asset/springbok-demo.png)
 
-## Recommended IDE Setup
+`springbok`提供了压缩与转换图片格式的功能，使用非常简单拖动图片至程序区域后即可自动压缩图片，最后一列`差异`值是基于人眼分辨的压缩前后图片比对，若比对的值大于1则可能图片质量较差，可选择恢复原图。
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+
+# License
+
+This project is Licensed under [Apache License, Version 2.0](./LICENSE).

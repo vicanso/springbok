@@ -127,7 +127,7 @@ export default function Setting() {
         >
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end mr-5">
+        <div className="flex flex-1 items-center justify-end space-x-2 mr-5">
           {dropdowns}
         </div>
       </div>
