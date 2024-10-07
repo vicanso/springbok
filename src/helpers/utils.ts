@@ -114,6 +114,21 @@ export const formatSize = (size: number) => {
   return size.toLocaleString();
 };
 
+export const formatBytes = (size: number) => {
+  if (size <= 0) {
+    return "0 B";
+  }
+  const kb = 1000;
+  const mb = 1000 * kb;
+  if (size > mb) {
+    return `${(size / mb).toFixed(2)} MB`;
+  }
+  if (size > kb) {
+    return `${(size / kb).toFixed(2)} KB`;
+  }
+  return `${size.toLocaleString()} B`;
+};
+
 export const formatSavings = (savings: number) => {
   if (savings < 0) {
     return "";

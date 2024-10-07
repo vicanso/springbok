@@ -25,6 +25,12 @@ interface FiletreeState {
   processing: boolean;
   clean: () => void;
   mock: () => void;
+  stats: () => {
+    totalSize: number;
+    savingsSize: number;
+    top: number;
+    average: number;
+  };
   optim: (qualities: Record<string, number>) => void;
   start: (qualities: Record<string, number>) => void;
   reset: () => void;
@@ -215,6 +221,36 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
         });
         get().optim(qualities);
       });
+  },
+  stats: () => {
+    const { files } = get();
+    let totalSize = 0;
+    let savingsSize = 0;
+    let top = 0;
+    let average = 0;
+    let count = 0;
+    files.forEach((file) => {
+      if (file.status !== Status.Success || file.savings <= 0) {
+        return;
+      }
+      count++;
+      average += file.savings;
+      if (file.savings > top) {
+        top = file.savings;
+      }
+      let original_size = file.size / (1 - file.savings);
+      totalSize += original_size;
+      savingsSize += original_size - file.size;
+    });
+    if (count) {
+      average = average / count;
+    }
+    return {
+      totalSize,
+      savingsSize,
+      average,
+      top,
+    };
   },
 }));
 

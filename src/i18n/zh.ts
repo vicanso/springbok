@@ -9,6 +9,8 @@ export default {
     diff: "差异",
     again: "再次执行",
     dragDropTips: "拖动图片文件至以上区域放开",
+    savingsTips:
+      "节约大小: {savedSize}，总大小：{totalSize}。每个文件平均节约：{average}%（最高{top}%）",
     clean: "清除",
     notSupported: "暂未支持",
     selectImageFail: "选择图片失败",

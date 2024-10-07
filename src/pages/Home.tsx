@@ -22,6 +22,7 @@ import {
   formatSavings,
   isWebMode,
   formatError,
+  formatBytes,
 } from "@/helpers/utils";
 import {
   Tooltip,
@@ -96,7 +97,7 @@ export default function Home() {
   const homeI18n = useI18n("home");
   const { toast } = useToast();
   const { getQualities, setting } = useSettingSate();
-  const { files, processing, mock, add, start, restore, reset, clean } =
+  const { files, processing, mock, add, start, restore, reset, clean, stats } =
     useFiletreeState();
 
   const handleSelectFiles = async (files: string[] | null) => {
@@ -179,6 +180,15 @@ export default function Home() {
       </div>
     );
   });
+  let tips = homeI18n("dragDropTips");
+  if (files.length !== 0) {
+    const result = stats();
+    tips = homeI18n("savingsTips")
+      .replace("{savedSize}", formatBytes(result.savingsSize))
+      .replace("{totalSize}", formatBytes(result.totalSize))
+      .replace("{average}", (result.average * 100).toFixed(2))
+      .replace("{top}", (result.top * 100).toFixed(2));
+  }
   return (
     <div>
       <div className="mb-[51px] text-xs">
@@ -257,7 +267,7 @@ export default function Home() {
             </Button>
           </div>
           <div className="grow h-8 text-muted-foreground text-xs leading-8">
-            {homeI18n("dragDropTips")}
+            {tips}
           </div>
           <div className="flex-none h-8 mx-2">
             <Button

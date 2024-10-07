@@ -9,6 +9,8 @@ export default {
     diff: "Diff",
     again: "Again",
     dragDropTips: "Drag and drop image files onto the area above",
+    savingsTips:
+      "Saved {savedSize} out of {totalSize}. {average}% per file on average (up to {top}%)",
     clean: "Clean All Files",
     notSupported: "Not Supported",
     selectImageFail: "Select Image Fail",
