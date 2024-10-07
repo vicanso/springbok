@@ -4,79 +4,57 @@ on:
     tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
     # branches: [ main ]
 
-env:
-  GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-  CARGO_TERM_COLOR: always
-
 jobs:
-  macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - name: release
-        run: |
-          uname -v
-          brew install nasm
-          make release
-          make macos
-          tar -czvf Springbok-darwin-x86_64.tar.gz Springbok.app
-          ./.github/workflows/upload_asset.sh ./Springbok-darwin-x86_64.tar.gz $GITHUB_TOKEN
-  macos-aarch:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - name: Install target
-        run: |
-          rustup update
-          rustup target add aarch64-apple-darwin
-      - name: release
-        run: |
-          uname -v
-          cargo build --release --target=aarch64-apple-darwin
-          mv ./target/aarch64-apple-darwin/release/springbok ./macos/Contents/MacOS/
-          mv ./macos ./Springbok.app
-          tar -czvf Springbok-darwin-aarch64.tar.gz Springbok.app
-          ./.github/workflows/upload_asset.sh ./Springbok-darwin-aarch64.tar.gz $GITHUB_TOKEN
-        
+  publish-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest" # for Arm based macs (M1 and above).
+            args: "--target aarch64-apple-darwin"
+          - platform: "macos-latest" # for Intel based macs.
+            args: "--target x86_64-apple-darwin"
+          - platform: "ubuntu-22.04" # for Tauri v1 you could replace this with ubuntu-20.04.
+            args: ""
+          - platform: "windows-latest"
+            args: ""
 
-  windows:
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: bash
+    runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
       - uses: ilammy/setup-nasm@v1
-      - name: release
-        run: make release
-      - name: Upload Assets
-        run: |
-          mv target/release/springbok.exe ./springbok-windows.exe
-          ./.github/workflows/upload_asset.sh ./springbok-windows.exe $GITHUB_TOKEN
+      - uses: actions/checkout@v4
 
-  linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
+      - name: setup node
+        uses: actions/setup-node@v4
         with:
-          toolchain: stable
-      - uses: ilammy/setup-nasm@v1
-      - name: release
+          node-version: lts/*
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Those targets are only used on macos runners so it's in an `if` to slightly speed up windows and linux builds.
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04' # This must match the platform value defined above.
         run: |
-          sudo apt update
-          sudo apt install -y libgtk-3-dev
-          make release
-      - name: Upload Assets
-        run: |
-          mv target/release/springbok ./springbok-linux
-          ./.github/workflows/upload_asset.sh ./springbok-linux $GITHUB_TOKEN
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+        # webkitgtk 4.0 is for Tauri v1 - webkitgtk 4.1 is for Tauri v2.
+        # You can remove the one that doesn't apply to your app to speed up the workflow a bit.
+
+      - name: install frontend dependencies
+        run: yarn install # change this to npm, pnpm or bun depending on which one you use.
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
+          releaseName: "App v__VERSION__"
+          releaseBody: "See the assets to download this version and install."
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
