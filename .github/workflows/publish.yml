@@ -1,8 +1,8 @@
 name: "publish"
 on:
   push:
-    tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
-    # branches: [ main ]
+    # tags: ["v[0-9]+.[0-9]+.[0-9]+*"]
+    branches: [release]
 
 jobs:
   publish-tauri:
@@ -52,8 +52,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
-          tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
-          releaseName: "App v__VERSION__"
+          tagName: springbok-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version.
+          releaseName: "Springbok v__VERSION__"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false

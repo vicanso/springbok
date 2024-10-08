@@ -23,5 +23,8 @@ export default {
     pngQualityPlaceholder: "Input the quality for png",
     jpegQualityPlaceholder: "Input the quality for jpeg",
     avifQualityPlaceholder: "Input the quality for avif",
+    reset: "Reset",
+    supportConverts: "Support Convert Formats",
+    supportConvertTips: "Enable the convert format for image optimization.",
   },
 };

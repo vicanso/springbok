@@ -1,6 +1,11 @@
 import { listen, TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
 import { eol } from "@tauri-apps/plugin-os";
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
+import {
+  getThemFromStorage,
+  getWindowSizeFromStorage,
+  setWindowSizeToStorage,
+} from "@/storages";
 
 type DropFilesEventCallback = (files: string[]) => void;
 
@@ -9,50 +14,37 @@ export function isWebMode() {
 }
 
 const dropFilesEventCallbacks: DropFilesEventCallback[] = [];
-interface WindowSize {
-  width: number;
-  height: number;
-}
-
-const windowSizeKey = "springbok.windowSize";
-
-function getWindowSize() {
-  const data = localStorage.getItem(windowSizeKey);
-  if (!data) {
-    return;
-  }
-  try {
-    const size: WindowSize = JSON.parse(data);
-    return size;
-  } catch (err) {
-    console.dir(err);
-  }
-}
 
 export async function initWindow() {
   if (isWebMode()) {
     return;
   }
+  // theme change event
+  await getCurrentWindow().onThemeChanged(({ payload: theme }) => {
+    if (["light", "dark"].includes(getThemFromStorage() || "")) {
+      return;
+    }
+    const root = window.document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(theme);
+  });
   // 避免发布版本可以reload页面
   if (window.location.protocol.includes("tauri")) {
     document.addEventListener("contextmenu", (e) => e.preventDefault());
   }
   const win = getCurrentWindow();
   const scale = await win.scaleFactor();
-  const size = getWindowSize();
+  const size = getWindowSizeFromStorage();
   if (size) {
     await win.setSize(new LogicalSize(size.width, size.height));
     await win.center();
   }
   win.onResized((event) => {
     const size = event.payload.toLogical(scale);
-    localStorage.setItem(
-      windowSizeKey,
-      JSON.stringify({
-        width: size.width,
-        height: size.height,
-      }),
-    );
+    setWindowSizeToStorage({
+      width: size.width,
+      height: size.height,
+    });
   });
 }
 

@@ -8,6 +8,7 @@ import {
   SunMoon,
   Cog,
   Languages,
+  RotateCw,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useTheme } from "@/components/theme-provider";
@@ -31,7 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import useSettingSate from "@/states/setting";
+import useSettingSate, { ImageFormat } from "@/states/setting";
 
 export default function Setting() {
   const { setTheme, theme } = useTheme();
@@ -40,8 +41,15 @@ export default function Setting() {
   const enLang = "en";
   const t = useI18n();
   const settingI18n = useI18n("setting");
-  const { isSupportedFormat, toggleSupportedFormat, updateQuality, setting } =
-    useSettingSate();
+  const {
+    isSupportedFormat,
+    isSupportedConvert,
+    toggleSupportedFormat,
+    toggleSupportedConvert,
+    updateQuality,
+    setting,
+    reset,
+  } = useSettingSate();
 
   const iconClassName = "mr-2 h-4 w-4";
 
@@ -96,7 +104,7 @@ export default function Setting() {
             中文
           </DropdownMenuItem>
           <DropdownMenuItem
-            className="cursor-pointe"
+            className="cursor-pointer"
             onClick={() => {
               i18n.changeLanguage(enLang);
             }}
@@ -105,14 +113,111 @@ export default function Setting() {
             {lang != enLang && <Languages className={iconClassName} />}
             English
           </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={() => {
+              reset();
+            }}
+          >
+            <RotateCw className={iconClassName} />
+            {settingI18n("reset")}
+          </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 
-  const pngFormat = "png";
-  const jpegFormat = "jpeg";
-  const avifFormat = "avif";
+  const optimImageFormats: JSX.Element[] = [];
+  [ImageFormat.Png, ImageFormat.Jpeg].forEach((item) => {
+    const id = `support-${item}`;
+    optimImageFormats.push(
+      <Checkbox
+        key={`${id}-checkbox`}
+        id={id}
+        defaultChecked={isSupportedFormat(item)}
+        onCheckedChange={() => {
+          toggleSupportedFormat(item);
+        }}
+      />,
+      <div className="grid gap-1.5 leading-none" key={`${id}-label`}>
+        <label
+          htmlFor={id}
+          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+        >
+          {item.toUpperCase()}
+        </label>
+      </div>,
+      <span key={`${id}-padding`} className="px-2"></span>,
+    );
+  });
+
+  const convertImageFormats: JSX.Element[] = [];
+  [
+    [ImageFormat.Png, ImageFormat.Webp],
+    [ImageFormat.Png, ImageFormat.Avif],
+    [ImageFormat.Jpeg, ImageFormat.Webp],
+    [ImageFormat.Jpeg, ImageFormat.Avif],
+  ].forEach((items) => {
+    const id = `convert-${items[0]}-${items[1]}`;
+
+    convertImageFormats.push(
+      <Checkbox
+        key={`${id}-checkbox`}
+        id={id}
+        defaultChecked={isSupportedConvert(items[0], items[1])}
+        onCheckedChange={() => {
+          toggleSupportedConvert(items[0], items[1]);
+        }}
+      />,
+      <div className="grid gap-1.5 leading-none" key={`${id}-label`}>
+        <label
+          htmlFor={id}
+          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+        >
+          {items[0].toUpperCase() + " -> " + items[1].toUpperCase()}
+        </label>
+      </div>,
+      <span key={`${id}-padding`} className="pl-1"></span>,
+    );
+  });
+
+  const iamgeQualities = [
+    ImageFormat.Png,
+    ImageFormat.Jpeg,
+    ImageFormat.Avif,
+  ].map((item) => {
+    const id = `quality-${item}`;
+    let defaultQuality = 0;
+    switch (item) {
+      case ImageFormat.Png: {
+        defaultQuality = setting.pngQuality;
+        break;
+      }
+      case ImageFormat.Jpeg: {
+        defaultQuality = setting.jpegQuality;
+        break;
+      }
+      case ImageFormat.Avif: {
+        defaultQuality = setting.avifQuality;
+        break;
+      }
+    }
+    return (
+      <div key={id} className="space-y-2">
+        <Label htmlFor={id}>{item.toUpperCase()}</Label>
+        <Input
+          type="number"
+          id={id}
+          defaultValue={defaultQuality}
+          onChange={(e) => {
+            updateQuality(item, e.target.valueAsNumber);
+          }}
+          placeholder={settingI18n(`${item}QualityPlaceholder`)}
+        />
+      </div>
+    );
+  });
 
   return (
     <div>
@@ -132,88 +237,37 @@ export default function Setting() {
         </div>
       </div>
       <Separator />
+
+      {/* support image formats */}
       <Card className="m-4">
         <CardHeader>
           <CardTitle>{settingI18n("supportImages")}</CardTitle>
           <CardDescription>{settingI18n("supportImageTips")}</CardDescription>
         </CardHeader>
         <CardContent className="items-top flex space-x-2">
-          <Checkbox
-            id="supportPng"
-            defaultChecked={isSupportedFormat(pngFormat)}
-            onCheckedChange={() => {
-              toggleSupportedFormat(pngFormat);
-            }}
-          />
-          <div className="grid gap-1.5 leading-none">
-            <label
-              htmlFor="supportPng"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              PNG
-            </label>
-          </div>
-          <Checkbox
-            id="supportJpeg"
-            defaultChecked={isSupportedFormat(jpegFormat)}
-            onCheckedChange={() => {
-              toggleSupportedFormat(jpegFormat);
-            }}
-          />
-          <div className="grid gap-1.5 leading-none">
-            <label
-              htmlFor="supportJpeg"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              JPEG
-            </label>
-          </div>
+          {optimImageFormats}
         </CardContent>
       </Card>
 
+      {/* image convert */}
+      <Card className="m-4">
+        <CardHeader>
+          <CardTitle>{settingI18n("supportConverts")}</CardTitle>
+          <CardDescription>{settingI18n("supportConvertTips")}</CardDescription>
+        </CardHeader>
+        <CardContent className="items-top flex space-x-2">
+          {convertImageFormats}
+        </CardContent>
+      </Card>
+
+      {/* image quality */}
       <Card className="m-4">
         <CardHeader>
           <CardTitle>{settingI18n("imageQuality")}</CardTitle>
           <CardDescription>{settingI18n("imageQualityTips")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="pngQuality">PNG</Label>
-            <Input
-              type="number"
-              id="pngQuality"
-              defaultValue={setting.pngQuality}
-              onChange={(e) => {
-                updateQuality(pngFormat, e.target.valueAsNumber);
-              }}
-              // onChange={}
-              placeholder={settingI18n("pngQualityPlaceholder")}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="jpegQuality">JPEG</Label>
-            <Input
-              type="number"
-              id="jpegQuality"
-              defaultValue={setting.jpegQuality}
-              onChange={(e) => {
-                updateQuality(jpegFormat, e.target.valueAsNumber);
-              }}
-              placeholder={settingI18n("jpegQualityPlaceholder")}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="avifQuality">AVIF</Label>
-            <Input
-              type="number"
-              id="avifQuality"
-              defaultValue={setting.avifQuality}
-              onChange={(e) => {
-                updateQuality(avifFormat, e.target.valueAsNumber);
-              }}
-              placeholder={settingI18n("avifQualityPlaceholder")}
-            />
-          </div>
+        <CardContent className="grid grid-cols-2 gap-4">
+          {iamgeQualities}
         </CardContent>
       </Card>
     </div>
