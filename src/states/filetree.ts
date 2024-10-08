@@ -1,5 +1,10 @@
-import { imageOptimize, listFile, restoreFile } from "@/commands";
-import { formatError, getFileExt } from "@/helpers/utils";
+import {
+  imageOptimize,
+  imamgeConvert,
+  listFile,
+  restoreFile,
+} from "@/commands";
+import { formatError, getFileExt, getImageFormat } from "@/helpers/utils";
 import { create } from "zustand";
 
 export enum Status {
@@ -13,6 +18,7 @@ export enum Status {
 interface File {
   status: Status;
   path: string;
+  original?: string;
   size: number;
   savings: number;
   diff: number;
@@ -35,7 +41,10 @@ interface FiletreeState {
   start: (qualities: Record<string, number>) => void;
   reset: () => void;
   restore: (hash: string, file: string) => Promise<void>;
-  add: (...files: string[]) => Promise<void>;
+  add: (
+    convertFormats: Record<string, string[]>,
+    ...files: string[]
+  ) => Promise<void>;
 }
 
 const filetreeState = create<FiletreeState>()((set, get) => ({
@@ -93,7 +102,7 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
     });
     return true;
   },
-  add: async (...items: string[]) => {
+  add: async (convertFormats: Record<string, string[]>, ...items: string[]) => {
     // filter folder and file
     // only support decode jpeg png
     const formats = ["png", "jpg", "jpeg"];
@@ -126,6 +135,19 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
         if (exists[path]) {
           return;
         }
+        const format = getImageFormat(path);
+        (convertFormats[format] || []).forEach((ext) => {
+          const target = path.substring(0, path.length - format.length) + ext;
+          arr.push({
+            status: Status.Pending,
+            original: path,
+            path: target,
+            size: -1,
+            savings: -1,
+            diff: -1,
+          });
+        });
+
         const file = {
           status: Status.Pending,
           path,
@@ -195,7 +217,13 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
       processing: true,
       files,
     });
-    imageOptimize(file.path, qualities)
+    Promise.resolve()
+      .then(() => {
+        if (file.original) {
+          return imamgeConvert(file.original, file.path, qualities);
+        }
+        return imageOptimize(file.path, qualities);
+      })
       .then((data) => {
         file.size = data.size;
         file.savings = 1 - data.size / data.original_size;

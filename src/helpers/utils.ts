@@ -154,6 +154,14 @@ export const formatDiff = (diff: number) => {
   return Number.parseInt(diff.toString()).toString();
 };
 
+export function getImageFormat(file: string) {
+  let format = getFileExt(file);
+  if (format === "jpg") {
+    format = "jpeg";
+  }
+  return format;
+}
+
 export const getFileExt = (file: string) => {
   const arr = file.split(".");
   if (arr.length < 2) {

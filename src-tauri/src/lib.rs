@@ -35,6 +35,7 @@ pub fn run() {
             commands::close_splashscreen,
             commands::show_splashscreen,
             commands::image_optimize,
+            commands::image_convert,
             commands::restore_file,
             commands::list_file,
         ])

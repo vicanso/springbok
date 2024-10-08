@@ -17,7 +17,7 @@ use glob::{glob, PatternError};
 use imageoptimize::{run, PROCESS_DIFF, PROCESS_LOAD, PROCESS_OPTIM};
 use serde::Serialize;
 use snafu::{ResultExt, Snafu};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::{command, Manager, Window};
 use tokio::fs;
 
@@ -31,6 +31,8 @@ pub enum Error {
     Io { source: std::io::Error },
     #[snafu(display("Glob error: {source}"))]
     Pattern { source: PatternError },
+    #[snafu(display("Format is invalid"))]
+    FormatInvalid {},
 }
 impl serde::Serialize for Error {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -41,6 +43,7 @@ impl serde::Serialize for Error {
             Error::OptimizeProcessing { source } => ("optim".to_string(), source.to_string()),
             Error::Io { source } => ("io".to_string(), source.to_string()),
             Error::Pattern { source } => ("pattern".to_string(), source.to_string()),
+            Error::FormatInvalid {} => ("format".to_string(), "Format is invalid".to_string()),
         };
         let json =
             r#"{"category": ""#.to_string() + &category + r#"", "message": ""# + &message + r#""}"#;
@@ -82,12 +85,56 @@ fn get_backup_file(hash: &str) -> PathBuf {
     utils::get_app_cache_dir().join(format!("{hash}.bak"))
 }
 
+fn get_image_format(file: &str) -> Result<String> {
+    let mut ext = Path::new(&file)
+        .extension()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+    if ext.is_empty() {
+        return Err(Error::FormatInvalid {});
+    }
+    if ext == "jpg" {
+        ext = "jpeg".to_string()
+    }
+    Ok(ext)
+}
+
 #[command(async)]
-pub async fn image_optimize(
+pub async fn image_convert(
     file: String,
+    target: String,
     quality: usize,
-    format: String,
 ) -> Result<ImageOptimizeResult> {
+    let format = get_image_format(&target)?;
+    let img = run(vec![
+        vec![PROCESS_LOAD.to_string(), format!("file://{file}")],
+        vec![
+            PROCESS_OPTIM.to_string(),
+            format,
+            quality.to_string(),
+            "3".to_string(),
+        ],
+        vec![PROCESS_DIFF.to_string()],
+    ])
+    .await
+    .context(OptimizeProcessingSnafu)?;
+    let metadata = fs::metadata(&file).await.context(IoSnafu)?;
+    let image_buffer = img.get_buffer().context(OptimizeProcessingSnafu)?;
+
+    fs::write(target, &image_buffer).await.context(IoSnafu)?;
+
+    Ok(ImageOptimizeResult {
+        diff: img.diff,
+        original_size: metadata.len() as usize,
+        size: image_buffer.len(),
+        ..Default::default()
+    })
+}
+
+#[command(async)]
+pub async fn image_optimize(file: String, quality: usize) -> Result<ImageOptimizeResult> {
+    let format = get_image_format(&file)?;
     let img = run(vec![
         vec![PROCESS_LOAD.to_string(), format!("file://{file}")],
         vec![

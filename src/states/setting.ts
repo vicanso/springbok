@@ -41,6 +41,7 @@ interface SettingState {
   toggleSupportedFormat: (format: string) => void;
   toggleSupportedConvert: (original: string, format: string) => void;
   getQualities: () => Record<string, number>;
+  getConvertFormats: () => Record<string, string[]>;
   updateSupportFormats: (supportFormats: string[]) => void;
   updateQuality: (format: string, quality: number) => void;
 }
@@ -94,6 +95,21 @@ const settingState = create<SettingState>()((set, get) => ({
       avif: setting.avifQuality,
     };
     return qualities;
+  },
+  getConvertFormats: () => {
+    const formats: Record<string, string[]> = {};
+    get().setting.supportConverts.forEach((item) => {
+      const arr = item.split("-");
+      if (arr.length !== 2) {
+        return;
+      }
+      const name = arr[0];
+      if (!formats[name]) {
+        formats[name] = [];
+      }
+      formats[name].push(arr[1]);
+    });
+    return formats;
   },
   updateSupportFormats: (supportFormats: string[]) => {
     const { setting } = get();

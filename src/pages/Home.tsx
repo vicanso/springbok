@@ -96,7 +96,7 @@ export default function Home() {
   const diffClass = "text-right w-[60px] pr-3";
   const homeI18n = useI18n("home");
   const { toast } = useToast();
-  const { getQualities, setting } = useSettingSate();
+  const { getQualities, getConvertFormats, setting } = useSettingSate();
   const { files, processing, mock, add, start, restore, reset, clean, stats } =
     useFiletreeState();
 
@@ -105,7 +105,7 @@ export default function Home() {
       return;
     }
     try {
-      await add(...files);
+      await add(getConvertFormats(), ...files);
       start(getQualities());
     } catch (err) {
       console.error(err);
