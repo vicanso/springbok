@@ -113,7 +113,7 @@ pub async fn image_convert(
             PROCESS_OPTIM.to_string(),
             format,
             quality.to_string(),
-            "3".to_string(),
+            "1".to_string(),
         ],
         vec![PROCESS_DIFF.to_string()],
     ])
@@ -141,7 +141,7 @@ pub async fn image_optimize(file: String, quality: usize) -> Result<ImageOptimiz
             PROCESS_OPTIM.to_string(),
             format,
             quality.to_string(),
-            "3".to_string(),
+            "1".to_string(),
         ],
         vec![PROCESS_DIFF.to_string()],
     ])
@@ -169,7 +169,6 @@ pub async fn image_optimize(file: String, quality: usize) -> Result<ImageOptimiz
     }
     fs::write(file, &image_buffer).await.context(IoSnafu)?;
 
-    // tauri::path::PathResolver;
     Ok(ImageOptimizeResult {
         diff: img.diff,
         hash,
