@@ -157,6 +157,11 @@ export default function Home() {
       );
     }
 
+    let savingsTextClass = "";
+    if (item.savings < 0) {
+      savingsTextClass = "text-rose-500";
+    }
+
     return (
       <div className={cn("flex h-10 leading-10", itemClass)} key={item.path}>
         <div className={cn("flex-none", statusClass)}>
@@ -164,14 +169,17 @@ export default function Home() {
             {formatStatus(homeI18n, item.status, item.message)}
           </div>
         </div>
-        <div className={cn("grow relative", fileClass)}>
+        <div
+          className={cn("grow relative overflow-hidden", fileClass)}
+          title={item.path}
+        >
           <div className="absolute right-0">{undo}</div>
           {formatFile(item.path)}
         </div>
         <div className={cn("flex-none", sizeClass)}>
           {formatSize(item.size)}
         </div>
-        <div className={cn("flex-none", savingsClass)}>
+        <div className={cn("flex-none", savingsClass, savingsTextClass)}>
           {formatSavings(item.savings)}
         </div>
         <div className={cn("flex-none", diffClass)}>

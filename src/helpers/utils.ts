@@ -126,7 +126,7 @@ export const formatBytes = (size: number) => {
 };
 
 export const formatSavings = (savings: number) => {
-  if (savings < 0) {
+  if (savings === Number.NEGATIVE_INFINITY) {
     return "";
   }
   return (savings * 100).toFixed(1) + "%";

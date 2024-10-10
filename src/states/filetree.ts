@@ -47,6 +47,15 @@ interface FiletreeState {
   ) => Promise<void>;
 }
 
+function resetFile(file: File) {
+  file.status = Status.Pending;
+  file.path = "";
+  file.size = -1;
+  file.savings = Number.NEGATIVE_INFINITY;
+  file.diff = -1;
+  return file;
+}
+
 const filetreeState = create<FiletreeState>()((set, get) => ({
   processing: false,
   files: [],
@@ -132,30 +141,27 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
       });
       const arr: File[] = [];
       files.forEach((path) => {
-        if (exists[path]) {
+        if (!path || exists[path]) {
           return;
         }
-        const format = getImageFormat(path);
-        (convertFormats[format] || []).forEach((ext) => {
-          const target = path.substring(0, path.length - format.length) + ext;
-          arr.push({
-            status: Status.Pending,
-            original: path,
-            path: target,
-            size: -1,
-            savings: -1,
-            diff: -1,
+        const notSupported = others.includes(path);
+        if (!notSupported) {
+          const format = getImageFormat(path);
+          (convertFormats[format] || []).forEach((ext) => {
+            const target = path.substring(0, path.length - format.length) + ext;
+            if (!target) {
+              return;
+            }
+            const file = resetFile({} as File);
+            file.original = path;
+            file.path = target;
+            arr.push(file);
           });
-        });
+        }
 
-        const file = {
-          status: Status.Pending,
-          path,
-          size: -1,
-          savings: -1,
-          diff: -1,
-        };
-        if (others.includes(path)) {
+        const file = resetFile({} as File);
+        file.path = path;
+        if (notSupported) {
           file.status = Status.NotSupported;
         }
         arr.push(file);
@@ -177,10 +183,8 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
     const size = await restoreFile(hash, file);
     const found = files.find((item) => item.path == file);
     if (found) {
+      resetFile(found);
       found.status = Status.NotModified;
-      found.diff = -1;
-      found.hash = "";
-      found.savings = -1;
       found.size = size;
       set({
         files,
@@ -191,12 +195,7 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
     const { files } = get();
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      file.status = Status.Pending;
-      file.size = -1;
-      file.savings = -1;
-      file.diff = -1;
-      file.message = "";
-      file.hash = "";
+      resetFile(file);
     }
     set({
       files,
@@ -258,7 +257,11 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
     let average = 0;
     let count = 0;
     files.forEach((file) => {
-      if (file.status !== Status.Success || file.savings <= 0) {
+      if (
+        file.status !== Status.Success ||
+        file.savings <= 0 ||
+        file.original
+      ) {
         return;
       }
       count++;
