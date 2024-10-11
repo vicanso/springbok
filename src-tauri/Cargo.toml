@@ -17,11 +17,11 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2.0.1", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.2", features = [] }
+tauri = { version = "2.0.2", features = ["protocol-asset"] }
 tauri-plugin-shell = "2.0.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-imageoptimize = "0.1.5"
+imageoptimize = "0.1.6"
 snafu = "0.8.5"
 tokio = { version = "1.40.0", default-features = false, features = ["fs"] }
 blake3 = "1.5.4"

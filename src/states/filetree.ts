@@ -15,7 +15,7 @@ export enum Status {
   Fail,
   NotSupported,
 }
-interface File {
+export interface File {
   status: Status;
   path: string;
   original?: string;
@@ -24,6 +24,8 @@ interface File {
   diff: number;
   message?: string;
   hash?: string;
+  width?: number;
+  height?: number;
 }
 
 interface FiletreeState {
@@ -224,6 +226,8 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
         return imageOptimize(file.path, qualities);
       })
       .then((data) => {
+        file.width = data.width;
+        file.height = data.height;
         file.size = data.size;
         file.savings = 1 - data.size / data.original_size;
         if (file.savings > 0) {

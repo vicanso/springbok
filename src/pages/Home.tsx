@@ -11,6 +11,7 @@ import {
   ShieldAlert,
   Ellipsis,
   Download,
+  Search,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -30,13 +31,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import useFiletreeState, { Status } from "@/states/filetree";
+import useFiletreeState, { Status, File } from "@/states/filetree";
 import useSettingSate from "@/states/setting";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n";
 import { goToSetting } from "@/routers";
 import { useToast } from "@/hooks/use-toast";
 import { open } from "@tauri-apps/plugin-dialog";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
 const formatStatus = (
   i18n: (key: string) => string,
@@ -99,6 +101,7 @@ export default function Home() {
   const { getQualities, getConvertFormats, setting } = useSettingSate();
   const { files, processing, mock, add, start, restore, reset, clean, stats } =
     useFiletreeState();
+  const [previewFile, setPreviewFile] = useState({} as File);
 
   const handleSelectFiles = async (files: string[] | null) => {
     if (!files || files.length === 0) {
@@ -116,6 +119,48 @@ export default function Home() {
     const unlisten = listenDragDrop(handleSelectFiles);
     return unlisten;
   }, []);
+
+  let preview: JSX.Element = <></>;
+  if (previewFile.path) {
+    let width = "";
+    let height = "";
+    let padding = 20;
+    let maxWidth = window.innerWidth - padding * 2;
+    let maxHeight = window.innerHeight - padding * 2;
+    let marginLeft = "";
+    let marginTop = "";
+    if (previewFile.width) {
+      const imageWidth = Math.min(previewFile.width, maxWidth);
+      width = `${imageWidth}px`;
+      marginLeft = `${(maxWidth - imageWidth) / 2}px`;
+    }
+    if (previewFile.height) {
+      const imageHeight = Math.min(previewFile.height, maxHeight);
+      height = `${imageHeight}px`;
+      marginTop = `${(maxHeight - imageHeight) / 2}px`;
+    }
+    preview = (
+      <div
+        className="fixed left-0 top-0 right-0 bottom-0 bg-muted/80"
+        style={{
+          padding: `${padding}px`,
+        }}
+        onClick={() => {
+          setPreviewFile({} as File);
+        }}
+      >
+        <img
+          src={convertFileSrc(previewFile.path)}
+          style={{
+            width,
+            height,
+            marginLeft,
+            marginTop,
+          }}
+        />
+      </div>
+    );
+  }
 
   const tab = (
     <div className="flex h-8 leading-8">
@@ -158,9 +203,14 @@ export default function Home() {
     }
 
     let savingsTextClass = "";
-    if (item.savings < 0) {
+    if (item.savings < 0.03) {
       savingsTextClass = "text-rose-500";
+    } else if (item.savings > 0.1) {
+      savingsTextClass = "text-green-500";
     }
+    const isDone = (status: Status) => {
+      return [Status.NotModified, Status.Success].includes(status);
+    };
 
     return (
       <div className={cn("flex h-10 leading-10", itemClass)} key={item.path}>
@@ -173,7 +223,22 @@ export default function Home() {
           className={cn("grow relative overflow-hidden", fileClass)}
           title={item.path}
         >
-          <div className="absolute right-0">{undo}</div>
+          <div className="absolute right-0">
+            {undo}
+            {isDone(item.status) && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10"
+                title="Image preview"
+                onClick={() => {
+                  setPreviewFile(item);
+                }}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
           {formatFile(item.path)}
         </div>
         <div className={cn("flex-none", sizeClass)}>
@@ -296,6 +361,7 @@ export default function Home() {
           </div>
         </div>
       </div>
+      {preview}
     </div>
   );
 }
