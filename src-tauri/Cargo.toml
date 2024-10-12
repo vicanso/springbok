@@ -1,6 +1,6 @@
 [package]
 name = "springbok"
-version = "0.3.1"
+version = "0.3.2"
 description = "GUI image optimizer build on tauri"
 authors = ["tree.xie@outlook.com"]
 license = "Apache License 2.0"
