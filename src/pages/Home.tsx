@@ -129,19 +129,28 @@ export default function Home() {
     let maxHeight = window.innerHeight - padding * 2;
     let marginLeft = "";
     let marginTop = "";
-    if (previewFile.width) {
-      const imageWidth = Math.min(previewFile.width, maxWidth);
-      width = `${imageWidth}px`;
-      marginLeft = `${(maxWidth - imageWidth) / 2}px`;
-    }
-    if (previewFile.height) {
-      const imageHeight = Math.min(previewFile.height, maxHeight);
-      height = `${imageHeight}px`;
-      marginTop = `${(maxHeight - imageHeight) / 2}px`;
+    if (previewFile.width && previewFile.height) {
+      let imageWidth = previewFile.width;
+      let imageHeight = previewFile.height;
+      let value = imageWidth / imageHeight;
+      if (imageWidth > maxWidth || imageHeight > maxHeight) {
+        if (maxWidth / maxHeight > imageWidth / imageHeight) {
+          imageHeight = maxHeight;
+          imageWidth = value * imageHeight;
+        } else {
+          imageWidth = maxWidth;
+          imageHeight = imageWidth / value;
+        }
+      }
+
+      width = `${Math.ceil(imageWidth)}px`;
+      marginLeft = `${Math.ceil(maxWidth - imageWidth) / 2}px`;
+      height = `${Math.ceil(imageHeight)}px`;
+      marginTop = `${Math.ceil(maxHeight - imageHeight) / 2}px`;
     }
     preview = (
       <div
-        className="fixed left-0 top-0 right-0 bottom-0 bg-muted/80"
+        className="fixed left-0 top-0 right-0 bottom-0 bg-muted/90"
         style={{
           padding: `${padding}px`,
         }}
@@ -194,6 +203,10 @@ export default function Home() {
               await restore(item.hash || "", item.path);
             } catch (err) {
               console.error(err);
+              toast({
+                title: homeI18n("restoreImageFail"),
+                description: formatError(err).message,
+              });
             }
           }}
         >

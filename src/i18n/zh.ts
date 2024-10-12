@@ -14,6 +14,7 @@ export default {
     clean: "清除",
     notSupported: "暂未支持",
     selectImageFail: "选择图片失败",
+    restoreImageFail: "恢复图片失败",
   },
   setting: {
     supportImages: "支持的图片格式",
