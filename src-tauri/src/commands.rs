@@ -79,6 +79,8 @@ pub struct ImageOptimizeResult {
     pub hash: String,
     pub size: usize,
     pub original_size: usize,
+    pub width: u32,
+    pub height: u32,
 }
 
 fn get_backup_file(hash: &str) -> PathBuf {
@@ -119,8 +121,23 @@ pub async fn image_convert(
     ])
     .await
     .context(OptimizeProcessingSnafu)?;
-    let metadata = fs::metadata(&file).await.context(IoSnafu)?;
+    let (width, height) = img.get_size();
     let image_buffer = img.get_buffer().context(OptimizeProcessingSnafu)?;
+    if let Ok(target_metadata) = fs::metadata(&target).await {
+        let original_size = target_metadata.len() as usize;
+        if image_buffer.len() >= original_size {
+            return Ok(ImageOptimizeResult {
+                diff: 0.0,
+                hash: "".to_string(),
+                original_size,
+                size: original_size,
+                width,
+                height,
+            });
+        }
+    }
+
+    let metadata = fs::metadata(&file).await.context(IoSnafu)?;
 
     fs::write(target, &image_buffer).await.context(IoSnafu)?;
 
@@ -128,6 +145,8 @@ pub async fn image_convert(
         diff: img.diff,
         original_size: metadata.len() as usize,
         size: image_buffer.len(),
+        width,
+        height,
         ..Default::default()
     })
 }
@@ -147,11 +166,14 @@ pub async fn image_optimize(file: String, quality: usize) -> Result<ImageOptimiz
     ])
     .await
     .context(OptimizeProcessingSnafu)?;
+    let (width, height) = img.get_size();
     let image_buffer = img.get_buffer().context(OptimizeProcessingSnafu)?;
     let buf = fs::read(&file).await.context(IoSnafu)?;
     let original_size = buf.len();
     if image_buffer.len() >= original_size {
         return Ok(ImageOptimizeResult {
+            width,
+            height,
             diff: 0.0,
             hash: "".to_string(),
             original_size,
@@ -170,6 +192,8 @@ pub async fn image_optimize(file: String, quality: usize) -> Result<ImageOptimiz
     fs::write(file, &image_buffer).await.context(IoSnafu)?;
 
     Ok(ImageOptimizeResult {
+        width,
+        height,
         diff: img.diff,
         hash,
         original_size,

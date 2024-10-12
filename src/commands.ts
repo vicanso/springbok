@@ -14,6 +14,15 @@ export async function closeSplashscreen() {
   await invoke("close_splashscreen");
 }
 
+interface OptimResult {
+  diff: number;
+  hash: string;
+  size: number;
+  original_size: number;
+  width: number;
+  height: number;
+}
+
 export async function imamgeConvert(
   file: string,
   target: string,
@@ -21,12 +30,7 @@ export async function imamgeConvert(
 ) {
   let format = getImageFormat(target);
   const quality = qualities[format] || 80;
-  const result: {
-    diff: number;
-    hash: string;
-    size: number;
-    original_size: number;
-  } = await invoke("image_convert", {
+  const result: OptimResult = await invoke("image_convert", {
     file,
     target,
     quality,
@@ -40,12 +44,7 @@ export async function imageOptimize(
 ) {
   let format = getImageFormat(file);
   const quality = qualities[format] || 80;
-  const result: {
-    diff: number;
-    hash: string;
-    size: number;
-    original_size: number;
-  } = await invoke("image_optimize", {
+  const result: OptimResult = await invoke("image_optimize", {
     file,
     quality,
   });
