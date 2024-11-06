@@ -49,9 +49,11 @@ interface FiletreeState {
   ) => Promise<void>;
 }
 
-function resetFile(file: File) {
+function resetFile(file: File, resetPath = true) {
   file.status = Status.Pending;
-  file.path = "";
+  if (resetPath) {
+    file.path = "";
+  }
   file.size = -1;
   file.savings = Number.NEGATIVE_INFINITY;
   file.diff = -1;
@@ -197,7 +199,7 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
     const { files } = get();
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      resetFile(file);
+      resetFile(file, false);
     }
     set({
       files,
