@@ -4457,6 +4457,7 @@ checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 name = "springbok"
 version = "0.3.3"
 dependencies = [
+ "base64 0.22.1",
  "blake3",
  "glob",
  "imageoptimize",
@@ -4470,6 +4471,7 @@ dependencies = [
  "tauri-plugin-os",
  "tauri-plugin-shell",
  "tokio",
+ "walkdir",
 ]
 
 [[package]]

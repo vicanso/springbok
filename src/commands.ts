@@ -21,6 +21,7 @@ interface OptimResult {
   original_size: number;
   width: number;
   height: number;
+  optim_count: number;
 }
 
 export async function imamgeConvert(
@@ -65,4 +66,8 @@ export async function listFile(folders: string[], exts: string[]) {
     exts,
   });
   return files;
+}
+
+export async function clearExpiredBackupFiles() {
+  return invoke("clear_expired_backup_files");
 }
