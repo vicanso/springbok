@@ -22,6 +22,13 @@ export function getTitleBarHeight() {
   return titleBarHeight;
 }
 
+export async function toggleMaximize() {
+  if (isWebMode()) {
+    return;
+  }
+  await getCurrentWindow().toggleMaximize();
+}
+
 export async function initWindow() {
   if (isWebMode()) {
     return titleBarHeight;
