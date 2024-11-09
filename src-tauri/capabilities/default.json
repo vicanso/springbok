@@ -8,6 +8,7 @@
     "core:window:allow-set-size",
     "core:window:allow-center",
     "core:window:allow-set-title-bar-style",
+    "core:window:allow-toggle-maximize",
     "dialog:allow-open",
     "dialog:default",
     "shell:allow-open"

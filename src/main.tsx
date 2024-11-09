@@ -2,7 +2,11 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "@/index.css";
-import { initListenDragDrop, initWindow } from "@/helpers/utils";
+import {
+  initListenDragDrop,
+  initWindow,
+  toggleMaximize,
+} from "@/helpers/utils";
 import { closeSplashscreen, showSplashscreen } from "@/commands";
 
 let showSplashTime: number;
@@ -18,6 +22,10 @@ showSplashscreen()
         {titleBarHeight !== 0 && (
           <div
             className="bg-titlebar"
+            onDoubleClick={(e) => {
+              e.preventDefault();
+              toggleMaximize();
+            }}
             style={{
               height: `${titleBarHeight}px`,
             }}
