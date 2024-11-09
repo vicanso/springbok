@@ -3,6 +3,7 @@
 @tailwind utilities;
 @layer base {
     :root {
+        --title-bar: 0 0% 95%;
         --background: 0 0% 100%;
         --foreground: 240 10% 3.9%;
         --card: 0 0% 100%;
@@ -30,6 +31,7 @@
         --radius: 0.5rem;
     }
     .dark {
+        --title-bar: 0 0% 7%;
         --background: 240 10% 3.9%;
         --foreground: 0 0% 98%;
         --card: 240 10% 3.9%;

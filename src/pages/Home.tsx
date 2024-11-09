@@ -24,6 +24,7 @@ import {
   isWebMode,
   formatError,
   formatBytes,
+  getTitleBarHeight,
 } from "@/helpers/utils";
 import {
   Tooltip,
@@ -275,12 +276,20 @@ export default function Home() {
       .replace("{average}", (result.average * 100).toFixed(2))
       .replace("{top}", (result.top * 100).toFixed(2));
   }
+
+  const top = getTitleBarHeight() + 32;
+
   return (
     <div>
       <div className="mb-[51px] text-xs">
         {tab}
         <Separator />
-        <div className="fixed bottom-[52px] top-[32px] left-0 right-0 leading-loose overflow-hidden">
+        <div
+          style={{
+            top: `${top}px`,
+          }}
+          className="fixed bottom-[52px] left-0 right-0 leading-loose overflow-hidden"
+        >
           {items.length !== 0 && (
             <ScrollArea className="h-full">{items}</ScrollArea>
           )}
