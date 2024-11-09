@@ -38,6 +38,7 @@ pub fn run() {
             commands::image_convert,
             commands::restore_file,
             commands::list_file,
+            commands::clear_expired_backup_files,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

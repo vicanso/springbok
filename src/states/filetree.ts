@@ -187,7 +187,7 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
     const size = await restoreFile(hash, file);
     const found = files.find((item) => item.path == file);
     if (found) {
-      resetFile(found);
+      resetFile(found, false);
       found.status = Status.NotModified;
       found.size = size;
       set({

@@ -1,5 +1,6 @@
 import { listen, TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
-import { eol } from "@tauri-apps/plugin-os";
+import { eol, platform } from "@tauri-apps/plugin-os";
+
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import {
   getThemFromStorage,
@@ -15,9 +16,15 @@ export function isWebMode() {
 
 const dropFilesEventCallbacks: DropFilesEventCallback[] = [];
 
+let titleBarHeight = 0;
+
+export function getTitleBarHeight() {
+  return titleBarHeight;
+}
+
 export async function initWindow() {
   if (isWebMode()) {
-    return;
+    return titleBarHeight;
   }
   // theme change event
   await getCurrentWindow().onThemeChanged(({ payload: theme }) => {
@@ -33,6 +40,10 @@ export async function initWindow() {
     document.addEventListener("contextmenu", (e) => e.preventDefault());
   }
   const win = getCurrentWindow();
+  if (platform() === "macos") {
+    await win.setTitleBarStyle("overlay");
+    titleBarHeight = 25;
+  }
   const scale = await win.scaleFactor();
   const size = getWindowSizeFromStorage();
   if (size) {
@@ -46,6 +57,7 @@ export async function initWindow() {
       height: size.height,
     });
   });
+  return titleBarHeight;
 }
 
 export function formatError(err: unknown) {

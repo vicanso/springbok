@@ -13,13 +13,18 @@
 // limitations under the License.
 
 use crate::utils;
+use base64::{engine::general_purpose, Engine as _};
 use glob::{glob, PatternError};
 use imageoptimize::{run, PROCESS_DIFF, PROCESS_LOAD, PROCESS_OPTIM};
 use serde::Serialize;
 use snafu::{ResultExt, Snafu};
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    time::{Duration, SystemTime},
+};
 use tauri::{command, Manager, Window};
 use tokio::fs;
+use walkdir::WalkDir;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -81,6 +86,7 @@ pub struct ImageOptimizeResult {
     pub original_size: usize,
     pub width: u32,
     pub height: u32,
+    pub optim_count: u8,
 }
 
 fn get_backup_file(hash: &str) -> PathBuf {
@@ -100,6 +106,32 @@ fn get_image_format(file: &str) -> Result<String> {
         ext = "jpeg".to_string()
     }
     Ok(ext)
+}
+
+#[command(async)]
+pub async fn clear_expired_backup_files() -> Result<()> {
+    let access_before = SystemTime::now()
+        .checked_sub(Duration::from_secs(24 * 3600))
+        .unwrap_or_else(|| SystemTime::now());
+    for entry in WalkDir::new(&utils::get_app_cache_dir())
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        if entry.path().extension().unwrap_or_default() != "bak" {
+            continue;
+        }
+        let Ok(metadata) = entry.metadata() else {
+            continue;
+        };
+        let Ok(accessed) = metadata.accessed() else {
+            continue;
+        };
+        if accessed > access_before {
+            continue;
+        }
+        fs::remove_file(entry.path()).await.context(IoSnafu)?;
+    }
+    Ok(())
 }
 
 #[command(async)]
@@ -133,6 +165,7 @@ pub async fn image_convert(
                 size: original_size,
                 width,
                 height,
+                ..Default::default()
             });
         }
     }
@@ -154,22 +187,42 @@ pub async fn image_convert(
 #[command(async)]
 pub async fn image_optimize(file: String, quality: usize) -> Result<ImageOptimizeResult> {
     let format = get_image_format(&file)?;
-    let img = run(vec![
-        vec![PROCESS_LOAD.to_string(), format!("file://{file}")],
-        vec![
-            PROCESS_OPTIM.to_string(),
-            format,
-            quality.to_string(),
-            "1".to_string(),
-        ],
-        vec![PROCESS_DIFF.to_string()],
-    ])
-    .await
-    .context(OptimizeProcessingSnafu)?;
-    let (width, height) = img.get_size();
-    let image_buffer = img.get_buffer().context(OptimizeProcessingSnafu)?;
     let buf = fs::read(&file).await.context(IoSnafu)?;
     let original_size = buf.len();
+
+    let mut data = general_purpose::STANDARD.encode(&buf);
+    let mut image_buffer = vec![];
+    let mut width = 0;
+    let mut height = 0;
+    let mut diff = 0.0;
+    let mut optim_count = 0;
+    // 多次执行
+    for _ in 0..3 {
+        let img = run(vec![
+            vec![PROCESS_LOAD.to_string(), data, format.clone()],
+            vec![
+                PROCESS_OPTIM.to_string(),
+                format.clone(),
+                quality.to_string(),
+                "1".to_string(),
+            ],
+            vec![PROCESS_DIFF.to_string()],
+        ])
+        .await
+        .context(OptimizeProcessingSnafu)?;
+        (width, height) = img.get_size();
+        image_buffer = img.get_buffer().context(OptimizeProcessingSnafu)?;
+        // 如果已经无法优化
+        if image_buffer.len() >= original_size {
+            break;
+        }
+        optim_count += 1;
+        diff += img.diff;
+        if diff > 0.5 {
+            break;
+        }
+        data = general_purpose::STANDARD.encode(&image_buffer);
+    }
     if image_buffer.len() >= original_size {
         return Ok(ImageOptimizeResult {
             width,
@@ -178,6 +231,7 @@ pub async fn image_optimize(file: String, quality: usize) -> Result<ImageOptimiz
             hash: "".to_string(),
             original_size,
             size: original_size,
+            optim_count,
         });
     }
     let mut hash = blake3::hash(&buf).to_hex().to_string();
@@ -194,10 +248,11 @@ pub async fn image_optimize(file: String, quality: usize) -> Result<ImageOptimiz
     Ok(ImageOptimizeResult {
         width,
         height,
-        diff: img.diff,
+        diff,
         hash,
         original_size,
         size: image_buffer.len(),
+        optim_count,
     })
 }
 
