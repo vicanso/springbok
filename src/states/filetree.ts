@@ -151,8 +151,10 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
         const notSupported = others.includes(path);
         if (!notSupported) {
           const format = getImageFormat(path);
+          const ext = getFileExt(path);
+          const targetPath = path.substring(0, path.length - ext.length);
           (convertFormats[format] || []).forEach((ext) => {
-            const target = path.substring(0, path.length - format.length) + ext;
+            const target = targetPath + ext;
             if (!target) {
               return;
             }
