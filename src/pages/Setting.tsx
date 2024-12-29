@@ -47,6 +47,7 @@ export default function Setting() {
     toggleSupportedFormat,
     toggleSupportedConvert,
     updateQuality,
+    updateOptimizeDisabled,
     setting,
     reset,
   } = useSettingSate();
@@ -182,7 +183,7 @@ export default function Setting() {
     );
   });
 
-  const iamgeQualities = [
+  const imageQualities = [
     ImageFormat.Png,
     ImageFormat.Jpeg,
     ImageFormat.Avif,
@@ -209,6 +210,7 @@ export default function Setting() {
         <Input
           type="number"
           id={id}
+          disabled={setting.optimizeDisabled}
           defaultValue={defaultQuality}
           onChange={(e) => {
             updateQuality(item, e.target.valueAsNumber);
@@ -263,11 +265,24 @@ export default function Setting() {
       {/* image quality */}
       <Card className="m-4">
         <CardHeader>
-          <CardTitle>{settingI18n("imageQuality")}</CardTitle>
+          <CardTitle>
+            <div className="flex items-center space-x-2 float-right">
+              <Checkbox id="quality-disabled" defaultChecked={setting.optimizeDisabled} onCheckedChange={(value) => {
+                updateOptimizeDisabled(value.valueOf() as boolean);
+              }} />
+              <label
+                htmlFor="quality-disabled"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {settingI18n("disabled")}
+              </label>
+            </div>
+            {settingI18n("imageQuality")}
+          </CardTitle>
           <CardDescription>{settingI18n("imageQualityTips")}</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4">
-          {iamgeQualities}
+          {imageQualities}
         </CardContent>
       </Card>
     </div>

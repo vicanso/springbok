@@ -14,6 +14,7 @@ export enum Status {
   Success,
   Fail,
   NotSupported,
+  Ignored,
 }
 export interface File {
   status: Status;
@@ -39,8 +40,8 @@ interface FiletreeState {
     top: number;
     average: number;
   };
-  optim: (qualities: Record<string, number>) => void;
-  start: (qualities: Record<string, number>) => void;
+  optim: (qualities: Record<string, number>, optimizeDisabled: boolean) => void;
+  start: (qualities: Record<string, number>, optimizeDisabled: boolean) => void;
   reset: () => void;
   restore: (hash: string, file: string) => Promise<void>;
   add: (
@@ -178,10 +179,10 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
       };
     });
   },
-  start: (qualities: Record<string, number>) => {
+  start: (qualities: Record<string, number>, optimizeDisabled: boolean) => {
     const { processing, optim } = get();
     if (!processing) {
-      optim(qualities);
+      optim(qualities, optimizeDisabled);
     }
   },
   restore: async (hash: string, file: string) => {
@@ -207,7 +208,7 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
       files,
     });
   },
-  optim: (qualities: Record<string, number>) => {
+  optim: (qualities: Record<string, number>, optimizeDisabled: boolean) => {
     const { files } = get();
     const index = files.findIndex((item) => item.status === Status.Pending);
     if (index === -1) {
@@ -227,9 +228,16 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
         if (file.original) {
           return imamgeConvert(file.original, file.path, qualities);
         }
+        if (optimizeDisabled) {
+          return null;
+        }
         return imageOptimize(file.path, qualities);
       })
       .then((data) => {
+        if (!data) {
+          file.status = Status.Ignored;
+          return;
+        }
         file.width = data.width;
         file.height = data.height;
         file.size = data.size;
@@ -254,7 +262,7 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
         set({
           files,
         });
-        get().optim(qualities);
+        get().optim(qualities, optimizeDisabled);
       });
   },
   stats: () => {

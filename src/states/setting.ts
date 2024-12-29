@@ -11,6 +11,7 @@ interface Setting {
   pngQuality: number;
   jpegQuality: number;
   avifQuality: number;
+  optimizeDisabled: boolean;
 }
 
 export enum ImageFormat {
@@ -27,6 +28,7 @@ function getSetting() {
     pngQuality: 90,
     jpegQuality: 90,
     avifQuality: 70,
+    optimizeDisabled: false,
   };
 
   Object.assign(defaultSetting, getSettingFromStorage());
@@ -44,6 +46,7 @@ interface SettingState {
   getConvertFormats: () => Record<string, string[]>;
   updateSupportFormats: (supportFormats: string[]) => void;
   updateQuality: (format: string, quality: number) => void;
+  updateOptimizeDisabled: (disabled: boolean) => void;
 }
 
 const settingState = create<SettingState>()((set, get) => ({
@@ -114,6 +117,14 @@ const settingState = create<SettingState>()((set, get) => ({
   updateSupportFormats: (supportFormats: string[]) => {
     const { setting } = get();
     setting.supportFormats = supportFormats || [];
+    setSettingToStorage(setting);
+    set({
+      setting,
+    });
+  },
+  updateOptimizeDisabled: (disabled: boolean) => {
+    const { setting } = get();
+    setting.optimizeDisabled = disabled;
     setSettingToStorage(setting);
     set({
       setting,

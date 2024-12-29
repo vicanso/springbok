@@ -1,5 +1,5 @@
 import { listen, TauriEvent, UnlistenFn } from "@tauri-apps/api/event";
-import { eol, platform } from "@tauri-apps/plugin-os";
+import { eol } from "@tauri-apps/plugin-os";
 
 import { getCurrentWindow, LogicalSize } from "@tauri-apps/api/window";
 import {
@@ -47,10 +47,10 @@ export async function initWindow() {
     document.addEventListener("contextmenu", (e) => e.preventDefault());
   }
   const win = getCurrentWindow();
-  if (platform() === "macos") {
-    await win.setTitleBarStyle("overlay");
-    titleBarHeight = 25;
-  }
+  // if (platform() === "macos") {
+  //   await win.setTitleBarStyle("overlay");
+  //   titleBarHeight = 25;
+  // }
   const scale = await win.scaleFactor();
   const size = getWindowSizeFromStorage();
   if (size) {
@@ -79,7 +79,7 @@ export function formatError(err: unknown) {
       if (data.message) {
         message = data.message as string;
       }
-    } catch (_e) {}
+    } catch (_e) { }
   }
 
   return {
@@ -104,7 +104,7 @@ function unlistenDragDrop(fn: DropFilesEventCallback) {
 export async function initListenDragDrop(): Promise<UnlistenFn> {
   if (isWebMode()) {
     // TODO mock
-    return () => {};
+    return () => { };
   }
 
   const unlisten = await listen<{

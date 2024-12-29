@@ -17,6 +17,7 @@ export default {
     restoreImageFail: "Restore Image Fail",
   },
   setting: {
+    disabled: "Disabled",
     supportImages: "Support Images",
     supportImageTips: "Enable the format for image optimization.",
     imageQuality: "Image Quality",

@@ -85,6 +85,9 @@ const formatStatus = (
         </TooltipProvider>
       );
     }
+    case Status.Ignored: {
+      return <span></span>;
+    }
     default: {
       return <span>...</span>;
     }
@@ -110,7 +113,7 @@ export default function Home() {
     }
     try {
       await add(getConvertFormats(), ...files);
-      start(getQualities());
+      start(getQualities(), setting.optimizeDisabled);
     } catch (err) {
       console.error(err);
     }
@@ -375,7 +378,7 @@ export default function Home() {
                   return;
                 }
                 reset();
-                start(getQualities());
+                start(getQualities(), setting.optimizeDisabled);
               }}
             >
               <RotateCw className="mr-2 h-4 w-4" /> {homeI18n("again")}
