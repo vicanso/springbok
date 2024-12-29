@@ -17,6 +17,7 @@ export default {
     restoreImageFail: "恢复图片失败",
   },
   setting: {
+    disabled: "禁用",
     supportImages: "支持的图片格式",
     supportImageTips: "启用要支持的图片格式",
     imageQuality: "图片压缩级别",
