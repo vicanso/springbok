@@ -4331,7 +4331,7 @@ dependencies = [
 
 [[package]]
 name = "springbok"
-version = "0.3.10"
+version = "0.3.12"
 dependencies = [
  "base64 0.22.1",
  "blake3",
