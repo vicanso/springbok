@@ -30,9 +30,10 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-
 import { Checkbox } from "@/components/ui/checkbox";
 import useSettingSate, { ImageFormat } from "@/states/setting";
+import { JSX } from "react";
+
 
 export default function Setting() {
   const { setTheme, theme } = useTheme();

@@ -40,6 +40,7 @@ import { goToSetting } from "@/routers";
 import { useToast } from "@/hooks/use-toast";
 import { open } from "@tauri-apps/plugin-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { JSX } from "react";
 
 const formatStatus = (
   i18n: (key: string) => string,
