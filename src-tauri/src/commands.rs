@@ -71,11 +71,9 @@ pub fn close_splashscreen(window: Window) {
 
 #[command]
 pub fn show_splashscreen(window: Window) {
-    window
-        .get_webview_window("splashscreen")
-        .unwrap()
-        .show()
-        .unwrap();
+    if let Some(splashscreen) = window.get_webview_window("splashscreen") {
+        splashscreen.show().unwrap();
+    }
 }
 
 #[derive(Debug, Default, Serialize)]

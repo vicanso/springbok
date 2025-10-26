@@ -14,6 +14,7 @@ export default {
     clean: "Clean All Files",
     notSupported: "Not Supported",
     selectImageFail: "Select Image Fail",
+    optimImageFail: "Optim Image Fail",
     restoreImageFail: "Restore Image Fail",
   },
   setting: {
