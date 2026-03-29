@@ -56,6 +56,7 @@ jobs:
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
           echo -n "$APPLE_CERTIFICATE" | base64 --decode -o $CERTIFICATE_PATH
+          echo "Certificate file size: $(wc -c < $CERTIFICATE_PATH) bytes"
 
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security default-keychain -s $KEYCHAIN_PATH
@@ -66,7 +67,14 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH $(security list-keychain -d user | tr -d '"')
 
+          echo "=== Keychain search list ==="
+          security list-keychain -d user
+          echo "=== Codesigning identities in build keychain ==="
           security find-identity -v -p codesigning $KEYCHAIN_PATH
+          echo "=== All codesigning identities ==="
+          security find-identity -v -p codesigning
+          echo "=== Keychain dump (certs only) ==="
+          security find-certificate -a $KEYCHAIN_PATH | head -20
 
       - name: install frontend dependencies
         run: yarn install # change this to npm, pnpm or bun depending on which one you use.
