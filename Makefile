@@ -1,11 +1,9 @@
 .PHONY: default macos
 
 lint:
-	cd src-tauri
-	cargo clippy
+	cd src-tauri && cargo clippy
 fmt:
-	cd src-tauri
-	cargo fmt --all --
+	cd src-tauri && cargo fmt --all --
 dev:
 	npm run tauri dev
 dev-web:

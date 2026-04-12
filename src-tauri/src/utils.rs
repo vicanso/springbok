@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use once_cell::sync::OnceCell;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
-static APP_CACHE_DIR: OnceCell<PathBuf> = OnceCell::new();
+static APP_CACHE_DIR: OnceLock<PathBuf> = OnceLock::new();
 
-pub fn set_app_cache_dir(dir: &PathBuf) {
-    APP_CACHE_DIR.get_or_init(|| dir.clone());
+pub fn set_app_cache_dir(dir: &Path) {
+    APP_CACHE_DIR.get_or_init(|| dir.to_path_buf());
 }
 
 pub fn get_app_cache_dir() -> PathBuf {
