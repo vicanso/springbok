@@ -84,25 +84,26 @@ jobs:
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
           security set-keychain-settings -t 3600 -u build.keychain
 
-          # Runner 缺少 Developer ID G2 中间证书，使用仓库内预置的证书文件导入系统钥匙串
-          sudo security add-trusted-cert -d -r trustAsRoot \
-            -k /Library/Keychains/System.keychain asset/DeveloperIDG2CA.cer
+          # 将 G2 中间证书导入到 build.keychain（让系统在链验证时能找到它）
+          security import asset/DeveloperIDG2CA.cer -k build.keychain -t cert
 
           # 导入你的 P12
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -A -T /usr/bin/codesign
 
-          # 关键：将钥匙串加入搜索列表并设置分区列表
+          # 将钥匙串加入搜索列表并设置分区列表
           security list-keychains -d user -s build.keychain $(security list-keychains -d user | sed 's/\"//g')
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
 
-          # 验证：不带 keychain 参数，在全部搜索列表中检查（应显示 ≥1 valid identity）
-          echo "Checking identities..."
+          # 诊断：列出 find-identity 结果（仅供参考，不以此决定成败）
+          echo "=== find-identity output ==="
           security find-identity -v -p codesigning
-          VALID=$(security find-identity -v -p codesigning | grep -c "valid identity" || true)
-          if [ "$VALID" -eq 0 ]; then
-            echo "ERROR: no valid codesigning identity found after import"
-            exit 1
-          fi
+
+          # 真实验证：直接用 codesign 对测试文件签名，与 tauri-action 行为一致
+          echo "=== codesign test ==="
+          cp /bin/ls /tmp/cs_test
+          codesign -s "Developer ID Application: tree xie (4G5PXJXZTU)" /tmp/cs_test \
+            && echo "CODESIGN TEST: SUCCESS" \
+            || { echo "CODESIGN TEST: FAILED"; codesign --verify --verbose /tmp/cs_test 2>&1 || true; exit 1; }
 
       - uses: tauri-apps/tauri-action@v0
         env:
