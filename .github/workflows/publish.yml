@@ -84,14 +84,16 @@ jobs:
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
           security set-keychain-settings -t 3600 -u build.keychain
 
-          # 将 G2 中间证书导入到 build.keychain（让系统在链验证时能找到它）
-          security import asset/DeveloperIDG2CA.cer -k build.keychain -t cert
+          # 补完信任链：将根证书和 G2 中间证书一并导入 build.keychain，使链路在该 keychain 内闭环
+          security import asset/AppleRootCAG2.cer   -k build.keychain -t cert
+          security import asset/DeveloperIDG2CA.cer  -k build.keychain -t cert
 
           # 导入你的 P12
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -A -T /usr/bin/codesign
 
-          # 将钥匙串加入搜索列表并设置分区列表
-          security list-keychains -d user -s build.keychain $(security list-keychains -d user | sed 's/\"//g')
+          # 将 build.keychain 加入搜索列表（用 xargs 去掉路径引号，比 sed 更可靠）
+          CURRENT_KEYCHAINS=$(security list-keychains -d user | xargs)
+          security list-keychains -d user -s build.keychain $CURRENT_KEYCHAINS
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
 
           # 诊断：列出 find-identity 结果（仅供参考，不以此决定成败）
