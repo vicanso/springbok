@@ -69,10 +69,8 @@ jobs:
 
           # 【新增：导入 Apple 中间证书】
           # 下载并导入 Developer ID G2 中间证书 (解决你的证书不被信任问题)
-          curl -O https://www.apple.com/certificateauthority/AppleDevelopmentCA.cer
-          curl -O https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
-          security import AppleDevelopmentCA.cer -k build.keychain -T /usr/bin/codesign
-          security import DeveloperIDG2CA.cer -k build.keychain -T /usr/bin/codesign
+          curl -L -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          security import DeveloperIDG2CA.cer -k build.keychain -t cert -T /usr/bin/codesign
           
           # 导入证书
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
@@ -80,8 +78,6 @@ jobs:
           # 【关键修复】：将临时钥匙串加入搜索列表
           # 这一步确保 codesign 能找到 build.keychain 里的内容
           security list-keychains -d user -s build.keychain $(security list-keychains -d user | sed 's/\"//g')
-          
-          # 设置权限列表，避免弹出输入密码的对话框
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
           
           # 【调试信息】：验证证书是否真的在里面且有效
