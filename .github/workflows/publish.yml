@@ -73,39 +73,54 @@ jobs:
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          # 解码 P12
+          # 解码 P12，先用 openssl 检查证书基本信息（签发者、有效期）
           echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
+          echo "=== Certificate info from P12 ==="
+          openssl pkcs12 -in certificate.p12 -passin pass:"$APPLE_CERTIFICATE_PASSWORD" \
+            -nokeys -clcerts 2>/dev/null \
+            | openssl x509 -noout -subject -issuer -dates 2>/dev/null \
+            || echo "WARNING: could not parse certificate from P12"
 
-          # 创建并解锁钥匙串
-          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          # 创建并解锁钥匙串（使用空密码，与 set-key-partition-list 保持一致）
+          security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security unlock-keychain -p "" build.keychain
           security set-keychain-settings -t 3600 -u build.keychain
 
-          # 补完信任链：将根证书和 G2 中间证书一并导入 build.keychain，使链路在该 keychain 内闭环
-          security import asset/AppleRootCAG2.cer   -k build.keychain -t cert
-          security import asset/DeveloperIDG2CA.cer  -k build.keychain -t cert
+          # 导入根证书并确认
+          security import asset/AppleRootCAG2.cer -k build.keychain -t cert
+          echo "=== After importing Apple Root CA G2 ==="
+          security find-certificate -a -c "Apple Root CA" build.keychain 2>/dev/null \
+            | grep alis || echo "NOT FOUND in build.keychain"
 
-          # 导入你的 P12
+          # 导入 G2 中间证书并确认
+          security import asset/DeveloperIDG2CA.cer -k build.keychain -t cert
+          echo "=== After importing Developer ID G2 CA ==="
+          security find-certificate -a -c "Developer ID Certification Authority" build.keychain 2>/dev/null \
+            | grep alis || echo "NOT FOUND in build.keychain"
+
+          # 导入 P12 并确认（-v 输出含义：不含 -v 时显示所有 identity，含 -v 只显示链完整的）
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -A -T /usr/bin/codesign
+          echo "=== After importing P12: all identities (chain not required) ==="
+          security find-identity -p codesigning build.keychain
+          echo "=== After importing P12: valid identities (chain required) ==="
+          security find-identity -v -p codesigning build.keychain
 
-          # 将 build.keychain 加入搜索列表（用 xargs 去掉路径引号，比 sed 更可靠）
+          # 加入搜索列表并设置分区（空密码与 create-keychain 一致）
           CURRENT_KEYCHAINS=$(security list-keychains -d user | xargs)
           security list-keychains -d user -s build.keychain $CURRENT_KEYCHAINS
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
 
-          # 诊断：列出 find-identity 结果（仅供参考，不以此决定成败）
-          echo "=== find-identity output ==="
+          echo "=== Final: valid identities across all keychains ==="
           security find-identity -v -p codesigning
 
-          # 真实验证：直接用 codesign 对测试文件签名，与 tauri-action 行为一致
+          # 真实验证：直接用 codesign 签名测试
           echo "=== codesign test ==="
           cp /bin/ls /tmp/cs_test
           codesign -s "Developer ID Application: tree xie (4G5PXJXZTU)" /tmp/cs_test \
             && echo "CODESIGN TEST: SUCCESS" \
-            || { echo "CODESIGN TEST: FAILED"; codesign --verify --verbose /tmp/cs_test 2>&1 || true; exit 1; }
+            || { echo "CODESIGN TEST: FAILED"; exit 1; }
 
       - uses: tauri-apps/tauri-action@v0
         env:
