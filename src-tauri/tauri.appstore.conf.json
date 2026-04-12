@@ -1,0 +1,8 @@
+{
+    "bundle": {
+        "macOS": {
+            "entitlements": "./Entitlements.plist",
+            "signingIdentity": "Developer ID Application: tree xie (4G5PXJXZTU)"
+        }
+    }
+}

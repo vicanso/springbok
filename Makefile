@@ -1,11 +1,9 @@
 .PHONY: default macos
 
 lint:
-	cd src-tauri
-	cargo clippy
+	cd src-tauri && cargo clippy
 fmt:
-	cd src-tauri
-	cargo fmt --all --
+	cd src-tauri && cargo fmt --all --
 dev:
 	npm run tauri dev
 dev-web:
@@ -17,4 +15,4 @@ icon:
 release:
 	cargo tauri build --no-bundle
 bundles:
-	cargo tauri build --bundles app,dmg
+	cargo tauri bundle --bundles app --target universal-apple-darwin --config src-tauri/tauri.appstore.conf.json

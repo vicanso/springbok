@@ -13,16 +13,16 @@
 // limitations under the License.
 
 use crate::utils;
-use base64::{engine::general_purpose, Engine as _};
-use glob::{glob, PatternError};
-use imageoptimize::{run, PROCESS_DIFF, PROCESS_LOAD, PROCESS_OPTIM};
+use base64::{Engine as _, engine::general_purpose};
+use glob::{PatternError, glob};
+use imageoptimize::{PROCESS_DIFF, PROCESS_LOAD, PROCESS_OPTIM, run};
 use serde::Serialize;
 use snafu::{ResultExt, Snafu};
 use std::{
     path::{Path, PathBuf},
     time::{Duration, SystemTime},
 };
-use tauri::{command, Manager, Window};
+use tauri::{Manager, Window, command};
 use tokio::fs;
 use walkdir::WalkDir;
 
@@ -71,11 +71,9 @@ pub fn close_splashscreen(window: Window) {
 
 #[command]
 pub fn show_splashscreen(window: Window) {
-    window
-        .get_webview_window("splashscreen")
-        .unwrap()
-        .show()
-        .unwrap();
+    if let Some(splashscreen) = window.get_webview_window("splashscreen") {
+        splashscreen.show().unwrap();
+    }
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -112,8 +110,8 @@ fn get_image_format(file: &str) -> Result<String> {
 pub async fn clear_expired_backup_files() -> Result<()> {
     let access_before = SystemTime::now()
         .checked_sub(Duration::from_secs(24 * 3600))
-        .unwrap_or_else(|| SystemTime::now());
-    for entry in WalkDir::new(&utils::get_app_cache_dir())
+        .unwrap_or_else(SystemTime::now);
+    for entry in WalkDir::new(utils::get_app_cache_dir())
         .into_iter()
         .filter_map(|e| e.ok())
     {

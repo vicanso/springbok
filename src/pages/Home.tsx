@@ -37,7 +37,7 @@ import useSettingSate from "@/states/setting";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/i18n";
 import { goToSetting } from "@/routers";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { open } from "@tauri-apps/plugin-dialog";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { JSX } from "react";
@@ -102,7 +102,6 @@ export default function Home() {
   const savingsClass = "text-right w-[80px] pr-3";
   const diffClass = "text-right w-[60px] pr-3";
   const homeI18n = useI18n("home");
-  const { toast } = useToast();
   const { getQualities, getConvertFormats, setting } = useSettingSate();
   const { files, processing, mock, add, start, restore, reset, clean, stats } =
     useFiletreeState();
@@ -117,6 +116,9 @@ export default function Home() {
       start(getQualities(), setting.optimizeDisabled);
     } catch (err) {
       console.error(err);
+      toast(homeI18n("optimImageFail"), {
+        description: formatError(err).message,
+      });
     }
   };
 
@@ -208,8 +210,7 @@ export default function Home() {
               await restore(item.hash || "", item.path);
             } catch (err) {
               console.error(err);
-              toast({
-                title: homeI18n("restoreImageFail"),
+              toast(homeI18n("restoreImageFail"), {
                 description: formatError(err).message,
               });
             }
@@ -332,8 +333,7 @@ export default function Home() {
                   .then(handleSelectFiles)
                   .catch((err) => {
                     console.error(err);
-                    toast({
-                      title: homeI18n("selectImageFail"),
+                    toast(homeI18n("selectImageFail"), {
                       description: formatError(err).message,
                     });
                   });
