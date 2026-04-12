@@ -24,10 +24,10 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: ilammy/setup-nasm@v1
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: setup node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: lts/*
 
@@ -59,14 +59,15 @@ jobs:
           echo "Certificate file size: $(wc -c < $CERTIFICATE_PATH) bytes"
 
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security default-keychain -s $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          # -ut: lock on timeout only (no sleep lock); 21600s = 6 hours
+          security set-keychain-settings -ut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
+          # Import both certificate and private key from the p12
           security import $CERTIFICATE_PATH -P "$APPLE_CERTIFICATE_PASSWORD" -A -f pkcs12 -k $KEYCHAIN_PATH
-          echo "=== Items imported (cert + key expected) ==="
-          security find-certificate -a -p $KEYCHAIN_PATH | openssl x509 -noout -subject -issuer 2>/dev/null || true
+          # Allow codesign to access the key without user prompt
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          # Prepend our keychain to the search list, keeping existing keychains
           security list-keychain -d user -s $KEYCHAIN_PATH $(security list-keychain -d user | tr -d '"')
 
           echo "=== Keychain search list ==="
@@ -75,21 +76,20 @@ jobs:
           security find-identity -v -p codesigning $KEYCHAIN_PATH
           echo "=== All codesigning identities ==="
           security find-identity -v -p codesigning
-          echo "=== Keychain dump (certs only) ==="
-          security find-certificate -a $KEYCHAIN_PATH | head -20
 
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
-
-      - name: Unlock keychain before signing (macOS only)
-        if: matrix.platform == 'macos-latest'
-        env:
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          echo "KEYCHAIN_PASSWORD_SAVED=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
 
       - name: install frontend dependencies
         run: yarn install # change this to npm, pnpm or bun depending on which one you use.
+
+      - name: Re-unlock keychain immediately before signing (macOS only)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD_SAVED" "$KEYCHAIN_PATH"
+          security set-keychain-settings -ut 21600 "$KEYCHAIN_PATH"
+          echo "=== Identities available right before signing ==="
+          security find-identity -v -p codesigning
 
       - uses: tauri-apps/tauri-action@v0
         env:
