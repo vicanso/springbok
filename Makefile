@@ -17,4 +17,4 @@ icon:
 release:
 	cargo tauri build --no-bundle
 bundles:
-	cargo tauri build --bundles app,dmg
+	cargo tauri bundle --bundles app --target universal-apple-darwin --config src-tauri/tauri.appstore.conf.json

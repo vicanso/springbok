@@ -42,6 +42,10 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "category": "Utility",
+    "macOS": {
+      "minimumSystemVersion": "12.0"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
