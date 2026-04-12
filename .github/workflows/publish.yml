@@ -50,46 +50,42 @@ jobs:
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
           echo -n "$APPLE_CERTIFICATE" | base64 --decode -o $CERTIFICATE_PATH
           echo "Certificate file size: $(wc -c < $CERTIFICATE_PATH) bytes"
 
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          # -ut: lock on timeout only (no sleep lock); 21600s = 6 hours
-          security set-keychain-settings -ut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          # Use the login keychain — it is always unlocked on GitHub-hosted runners
+          # and never needs manual unlock between steps.
+          KEYCHAIN_PATH=$HOME/Library/Keychains/login.keychain-db
 
-          # Import both certificate and private key from the p12
+          # Import cert + private key
           security import $CERTIFICATE_PATH -P "$APPLE_CERTIFICATE_PASSWORD" -A -f pkcs12 -k $KEYCHAIN_PATH
-          # Allow codesign to access the key without user prompt
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          # Prepend our keychain to the search list, keeping existing keychains
-          security list-keychain -d user -s $KEYCHAIN_PATH $(security list-keychain -d user | tr -d '"')
 
-          echo "=== Keychain search list ==="
-          security list-keychain -d user
-          echo "=== Codesigning identities in build keychain ==="
-          security find-identity -v -p codesigning $KEYCHAIN_PATH
-          echo "=== All codesigning identities ==="
+          # Allow codesign to access the private key without a UI prompt.
+          # The login keychain password on GitHub-hosted macOS runners is "".
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" $KEYCHAIN_PATH
+
+          echo "=== All codesigning identities after import ==="
           security find-identity -v -p codesigning
 
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
-          echo "KEYCHAIN_PASSWORD_SAVED=$KEYCHAIN_PASSWORD" >> $GITHUB_ENV
 
       - name: install frontend dependencies
         run: yarn install # change this to npm, pnpm or bun depending on which one you use.
 
-      - name: Re-unlock keychain immediately before signing (macOS only)
+      - name: Verify codesign identity before build (macOS only)
         if: matrix.platform == 'macos-latest'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD_SAVED" "$KEYCHAIN_PATH"
-          security set-keychain-settings -ut 21600 "$KEYCHAIN_PATH"
           echo "=== Identities available right before signing ==="
           security find-identity -v -p codesigning
+          echo "=== Test-sign a dummy file ==="
+          echo "test" > /tmp/codesign_test
+          codesign -s "$APPLE_SIGNING_IDENTITY" /tmp/codesign_test \
+            && echo "SUCCESS: test sign worked" \
+            || echo "FAILED: test sign failed — check identity name matches the cert above"
 
       - uses: tauri-apps/tauri-action@v0
         env:
