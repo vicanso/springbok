@@ -51,6 +51,23 @@ jobs:
       - name: install frontend dependencies
         run: yarn install # change this to npm, pnpm or bun depending on which one you use.
 
+      - name: Check system CA certificates (macOS only)
+        if: matrix.platform == 'macos-latest'
+        run: |
+          echo "=== Searching all keychains for Apple Root CA G2 ==="
+          security find-certificate -a -c "Apple Root CA - G2" /Library/Keychains/System.keychain 2>/dev/null \
+            && echo "FOUND: Apple Root CA - G2" \
+            || echo "NOT FOUND: Apple Root CA - G2"
+
+          echo "=== Searching all keychains for Developer ID G2 intermediate ==="
+          security find-certificate -a -c "Developer ID Certification Authority" /Library/Keychains/System.keychain 2>/dev/null \
+            | grep -E "(alis|labl)" \
+            || echo "NOT FOUND: Developer ID Certification Authority"
+
+          echo "=== All CA certs in System.keychain (grep Apple) ==="
+          security find-certificate -a /Library/Keychains/System.keychain 2>/dev/null \
+            | grep "alis" | grep -i apple || true
+
       - name: Import Apple certificate (macOS only)
         if: matrix.platform == 'macos-latest'
         env:
@@ -67,19 +84,8 @@ jobs:
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
           security set-keychain-settings -t 3600 -u build.keychain
 
-          # 下载 G2 链所需的全部证书
-          # 中间证书 (Intermediate)
-          curl -L -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
-          # 根证书 (Root G2) - 某些 Runner 环境缺少这个
-          curl -L -o AppleRootCAG2.cer https://www.apple.com/certificateauthority/AppleRootCA-G2.cer
-          
-          # 导入中间证书和根证书，并标记为受信任（仅 import 不够，必须 add-trusted-cert）
-          security import DeveloperIDG2CA.cer -k build.keychain -t cert
-          security import AppleRootCAG2.cer -k build.keychain -t cert
-          security add-trusted-cert -d -r trustAsRoot -k build.keychain DeveloperIDG2CA.cer
-          security add-trusted-cert -d -r trustRoot   -k build.keychain AppleRootCAG2.cer
-
-          # 导入你的 P12
+          # 导入你的 P12（中间/根证书在 Runner 系统钥匙串中已有，无需单独导入）
+          # 注意：add-trusted-cert -d 需要交互式授权，会在 CI 中永久挂起，不可使用
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -A -T /usr/bin/codesign
 
           # 关键：将钥匙串加入搜索列表并设置分区列表
