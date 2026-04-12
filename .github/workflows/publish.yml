@@ -69,9 +69,13 @@ jobs:
 
           # 【新增：导入 Apple 中间证书】
           # 下载并导入 Developer ID G2 中间证书 (解决你的证书不被信任问题)
-          curl -L -o DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
-          security import DeveloperIDG2CA.cer -k build.keychain -t cert -T /usr/bin/codesign
+          curl -L -o DeveloperIDG2.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+          # Apple WWDR G6 (Apple 开发者关系的通用根证书)
+          curl -L -o AppleWWDRG6.cer https://www.apple.com/certificateauthority/AppleWWDRCAG6.cer
           
+          security import DeveloperIDG2.cer -k build.keychain -t cert -T /usr/bin/codesign
+          security import AppleWWDRG6.cer -k build.keychain -t cert -T /usr/bin/codesign
+
           # 导入证书
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           
