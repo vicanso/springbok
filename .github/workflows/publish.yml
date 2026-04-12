@@ -60,9 +60,9 @@ jobs:
             || echo "NOT FOUND: Apple Root CA - G2"
 
           echo "=== Searching all keychains for Developer ID G2 intermediate ==="
-          security find-certificate -a -c "Developer ID Certification Authority" /Library/Keychains/System.keychain 2>/dev/null \
-            | grep -E "(alis|labl)" \
-            || echo "NOT FOUND: Developer ID Certification Authority"
+          security find-certificate -a -c "Developer ID Certification Authority G2" /Library/Keychains/System.keychain 2>/dev/null \
+            && echo "FOUND: Developer ID Certification Authority G2" \
+            || echo "NOT FOUND: Developer ID Certification Authority G2"
 
           echo "=== All CA certs in System.keychain (grep Apple) ==="
           security find-certificate -a /Library/Keychains/System.keychain 2>/dev/null \
@@ -84,8 +84,11 @@ jobs:
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
           security set-keychain-settings -t 3600 -u build.keychain
 
-          # 导入你的 P12（中间/根证书在 Runner 系统钥匙串中已有，无需单独导入）
-          # 注意：add-trusted-cert -d 需要交互式授权，会在 CI 中永久挂起，不可使用
+          # Runner 缺少 Developer ID G2 中间证书，使用仓库内预置的证书文件导入系统钥匙串
+          sudo security add-trusted-cert -d -r trustAsRoot \
+            -k /Library/Keychains/System.keychain asset/DeveloperIDG2CA.cer
+
+          # 导入你的 P12
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -A -T /usr/bin/codesign
 
           # 关键：将钥匙串加入搜索列表并设置分区列表
