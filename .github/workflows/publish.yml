@@ -76,6 +76,16 @@ jobs:
           echo "=== Keychain dump (certs only) ==="
           security find-certificate -a $KEYCHAIN_PATH | head -20
 
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
+
+      - name: Unlock keychain before signing (macOS only)
+        if: matrix.platform == 'macos-latest'
+        env:
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+
       - name: install frontend dependencies
         run: yarn install # change this to npm, pnpm or bun depending on which one you use.
 
