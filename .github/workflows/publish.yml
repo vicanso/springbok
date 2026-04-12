@@ -73,20 +73,27 @@ jobs:
           # 根证书 (Root G2) - 某些 Runner 环境缺少这个
           curl -L -o AppleRootCAG2.cer https://www.apple.com/certificateauthority/AppleRootCA-G2.cer
           
-          # 导入并设置信任
-          security import DeveloperIDG2CA.cer -k build.keychain -t cert -T /usr/bin/codesign
-          security import AppleRootCAG2.cer -k build.keychain -t cert -T /usr/bin/codesign
-          
-          # 导入你的 P12 (使用 -A 允许所有应用访问，防止 codesign 弹出权限确认)
+          # 导入中间证书和根证书，并标记为受信任（仅 import 不够，必须 add-trusted-cert）
+          security import DeveloperIDG2CA.cer -k build.keychain -t cert
+          security import AppleRootCAG2.cer -k build.keychain -t cert
+          security add-trusted-cert -d -r trustAsRoot -k build.keychain DeveloperIDG2CA.cer
+          security add-trusted-cert -d -r trustRoot   -k build.keychain AppleRootCAG2.cer
+
+          # 导入你的 P12
           security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -A -T /usr/bin/codesign
 
           # 关键：将钥匙串加入搜索列表并设置分区列表
           security list-keychains -d user -s build.keychain $(security list-keychains -d user | sed 's/\"//g')
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
 
-          # 验证
+          # 验证：不带 keychain 参数，在全部搜索列表中检查（应显示 ≥1 valid identity）
           echo "Checking identities..."
-          security find-identity -v -p codesigning build.keychain
+          security find-identity -v -p codesigning
+          VALID=$(security find-identity -v -p codesigning | grep -c "valid identity" || true)
+          if [ "$VALID" -eq 0 ]; then
+            echo "ERROR: no valid codesigning identity found after import"
+            exit 1
+          fi
 
       - uses: tauri-apps/tauri-action@v0
         env:
