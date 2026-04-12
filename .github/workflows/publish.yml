@@ -115,10 +115,10 @@ jobs:
           echo "=== Final: valid identities across all keychains ==="
           security find-identity -v -p codesigning
 
-          # 真实验证：直接用 codesign 签名测试
+          # 真实验证：对已有签名的文件用 --force 覆盖签名
           echo "=== codesign test ==="
           cp /bin/ls /tmp/cs_test
-          codesign -s "Developer ID Application: tree xie (4G5PXJXZTU)" /tmp/cs_test \
+          codesign --force -s "Developer ID Application: tree xie (4G5PXJXZTU)" /tmp/cs_test \
             && echo "CODESIGN TEST: SUCCESS" \
             || { echo "CODESIGN TEST: FAILED"; exit 1; }
 
