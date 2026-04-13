@@ -76,7 +76,7 @@ jobs:
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
           # 解码 P12，先用 openssl 检查证书基本信息（签发者、有效期）
-          echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
+          echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
           echo "=== Certificate info from P12 ==="
           openssl pkcs12 -in certificate.p12 -passin pass:"$APPLE_CERTIFICATE_PASSWORD" \
             -nokeys -clcerts 2>/dev/null \
