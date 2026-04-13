@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /* v4 中 darkMode: ["class"] 的等价写法 */
 @custom-variant dark (&:where(.dark, .dark *));
