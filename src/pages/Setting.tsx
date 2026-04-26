@@ -188,6 +188,7 @@ export default function Setting() {
     ImageFormat.Png,
     ImageFormat.Jpeg,
     ImageFormat.Avif,
+    ImageFormat.Webp,
   ].map((item) => {
     const id = `quality-${item}`;
     let defaultQuality = 0;
@@ -202,6 +203,10 @@ export default function Setting() {
       }
       case ImageFormat.Avif: {
         defaultQuality = setting.avifQuality;
+        break;
+      }
+      case ImageFormat.Webp: {
+        defaultQuality = setting.webpQuality;
         break;
       }
     }
