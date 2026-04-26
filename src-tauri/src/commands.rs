@@ -209,7 +209,7 @@ pub async fn image_optimize(file: String, quality: usize) -> Result<ImageOptimiz
         .await
         .context(OptimizeProcessingSnafu)?;
         (width, height) = img.get_size();
-        image_buffer = img.get_buffer().context(OptimizeProcessingSnafu)?;
+        image_buffer = img.get_buffer().context(OptimizeProcessingSnafu)?.to_vec();
         // 如果已经无法优化
         if image_buffer.len() >= original_size {
             break;

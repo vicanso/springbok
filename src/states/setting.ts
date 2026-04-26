@@ -11,6 +11,7 @@ interface Setting {
   pngQuality: number;
   jpegQuality: number;
   avifQuality: number;
+  webpQuality: number;
   optimizeDisabled: boolean;
 }
 
@@ -28,6 +29,7 @@ function getSetting() {
     pngQuality: 90,
     jpegQuality: 90,
     avifQuality: 70,
+    webpQuality: 80,
     optimizeDisabled: false,
   };
 
@@ -94,8 +96,9 @@ const settingState = create<SettingState>()((set, get) => ({
     const { setting } = get();
     const qualities: Record<string, number> = {
       png: setting.pngQuality,
-      jpeg: setting.avifQuality,
+      jpeg: setting.jpegQuality,
       avif: setting.avifQuality,
+      webp: setting.webpQuality,
     };
     return qualities;
   },
@@ -139,6 +142,10 @@ const settingState = create<SettingState>()((set, get) => ({
       }
       case ImageFormat.Avif: {
         setting.avifQuality = quality || 70;
+        break;
+      }
+      case ImageFormat.Webp: {
+        setting.webpQuality = quality || 80;
         break;
       }
       default: {

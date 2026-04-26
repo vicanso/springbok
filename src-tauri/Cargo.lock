@@ -119,17 +119,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-trait"
-version = "0.1.89"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9035ad2d096bed7955a320ee7e2230574d28fd3c3a0f186cbea1ff3c7eed5dbb"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.117",
-]
-
-[[package]]
 name = "atk"
 version = "0.18.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -341,9 +330,9 @@ dependencies = [
 
 [[package]]
 name = "blake3"
-version = "1.8.4"
+version = "1.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d2d5991425dfd0785aed03aedcf0b321d61975c9b5b3689c774a2610ae0b51e"
+checksum = "0aa83c34e62843d924f905e0f5c866eb1dd6545fc4d719e803d9ba6030371fce"
 dependencies = [
  "arrayref",
  "arrayvec",
@@ -2038,11 +2027,10 @@ dependencies = [
 
 [[package]]
 name = "imageoptimize"
-version = "0.4.1"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f9f376d5e56f9c9b130bca09fe4d9823f5bc0a8d6a8271993019caf43c85ff7"
+checksum = "71d5878da9f33fe075514a5f4d6dd2cb0a19a313192a78d776aca9a6a779874a"
 dependencies = [
- "async-trait",
  "avif-decode",
  "base64 0.22.1",
  "dssim-core",
@@ -2053,8 +2041,8 @@ dependencies = [
  "reqwest",
  "rgb",
  "snafu",
- "substring",
  "urlencoding",
+ "webp",
 ]
 
 [[package]]
@@ -2383,6 +2371,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ddbf48fd451246b1f8c2610bd3b4ac0cc6e149d89832867093ab69a17194f08"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "libwebp-sys"
+version = "0.9.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54cd30df7c7165ce74a456e4ca9732c603e8dc5e60784558c1c6dc047f876733"
+dependencies = [
+ "cc",
+ "glob",
 ]
 
 [[package]]
@@ -4508,7 +4506,7 @@ dependencies = [
 
 [[package]]
 name = "springbok"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "base64 0.22.1",
  "blake3",
@@ -4586,15 +4584,6 @@ name = "strsim"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
-
-[[package]]
-name = "substring"
-version = "1.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "42ee6433ecef213b2e72f587ef64a2f5943e7cd16fbd82dbe8bc07486c534c86"
-dependencies = [
- "autocfg",
-]
 
 [[package]]
 name = "subtle"
@@ -5199,9 +5188,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.51.1"
+version = "1.52.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f66bf9585cda4b724d3e78ab34b73fb2bbaba9011b9bfdf69dc836382ea13b8c"
+checksum = "b67dee974fe86fd92cc45b7a95fdd2f99a36a6d7b0d431a231178d3d670bbcc6"
 dependencies = [
  "bytes",
  "libc",
@@ -5835,6 +5824,16 @@ dependencies = [
  "pkg-config",
  "soup3-sys",
  "system-deps",
+]
+
+[[package]]
+name = "webp"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c071456adef4aca59bf6a583c46b90ff5eb0b4f758fc347cea81290288f37ce1"
+dependencies = [
+ "image",
+ "libwebp-sys",
 ]
 
 [[package]]
