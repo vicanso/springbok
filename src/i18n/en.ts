@@ -26,6 +26,8 @@ export default {
     pngQualityPlaceholder: "Input the quality for png",
     jpegQualityPlaceholder: "Input the quality for jpeg",
     avifQualityPlaceholder: "Input the quality for avif",
+    webpQualityPlaceholder: "Input the quality for webp",
+    jxlQualityPlaceholder: "Input the quality for jxl",
     reset: "Reset",
     supportConverts: "Support Convert Formats",
     supportConvertTips: "Enable the convert format for image optimization.",

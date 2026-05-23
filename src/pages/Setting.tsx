@@ -158,8 +158,10 @@ export default function Setting() {
   [
     [ImageFormat.Png, ImageFormat.Webp],
     [ImageFormat.Png, ImageFormat.Avif],
+    [ImageFormat.Png, ImageFormat.Jxl],
     [ImageFormat.Jpeg, ImageFormat.Webp],
     [ImageFormat.Jpeg, ImageFormat.Avif],
+    [ImageFormat.Jpeg, ImageFormat.Jxl],
   ].forEach((items) => {
     const id = `convert-${items[0]}-${items[1]}`;
 
@@ -189,6 +191,7 @@ export default function Setting() {
     ImageFormat.Jpeg,
     ImageFormat.Avif,
     ImageFormat.Webp,
+    ImageFormat.Jxl,
   ].map((item) => {
     const id = `quality-${item}`;
     let defaultQuality = 0;
@@ -207,6 +210,10 @@ export default function Setting() {
       }
       case ImageFormat.Webp: {
         defaultQuality = setting.webpQuality;
+        break;
+      }
+      case ImageFormat.Jxl: {
+        defaultQuality = setting.jxlQuality;
         break;
       }
     }
