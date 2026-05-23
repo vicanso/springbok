@@ -26,6 +26,8 @@ export default {
     pngQualityPlaceholder: "输入png图片的压缩质量级别",
     jpegQualityPlaceholder: "输入jpeg图片的压缩质量级别",
     avifQualityPlaceholder: "输入avif图片的压缩质量级别",
+    webpQualityPlaceholder: "输入webp图片的压缩质量级别",
+    jxlQualityPlaceholder: "输入jxl图片的压缩质量级别",
     reset: "重置配置",
     supportConverts: "支持转换的图片格式",
     supportConvertTips: "启用要支持的图片转换格式",

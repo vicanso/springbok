@@ -40,7 +40,7 @@ showSplashscreen()
     console.error(err);
   })
   .finally(() => {
-    let ms = 300 - (Date.now() - showSplashTime);
+    let ms = 500 - (Date.now() - showSplashTime);
     if (ms < 0) {
       ms = 0;
     }

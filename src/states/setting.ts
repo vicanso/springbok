@@ -12,6 +12,7 @@ interface Setting {
   jpegQuality: number;
   avifQuality: number;
   webpQuality: number;
+  jxlQuality: number;
   optimizeDisabled: boolean;
 }
 
@@ -20,6 +21,7 @@ export enum ImageFormat {
   Jpeg = "jpeg",
   Avif = "avif",
   Webp = "webp",
+  Jxl = "jxl",
 }
 
 function getSetting() {
@@ -30,6 +32,7 @@ function getSetting() {
     jpegQuality: 90,
     avifQuality: 70,
     webpQuality: 80,
+    jxlQuality: 75,
     optimizeDisabled: false,
   };
 
@@ -99,6 +102,7 @@ const settingState = create<SettingState>()((set, get) => ({
       jpeg: setting.jpegQuality,
       avif: setting.avifQuality,
       webp: setting.webpQuality,
+      jxl: setting.jxlQuality,
     };
     return qualities;
   },
@@ -146,6 +150,10 @@ const settingState = create<SettingState>()((set, get) => ({
       }
       case ImageFormat.Webp: {
         setting.webpQuality = quality || 80;
+        break;
+      }
+      case ImageFormat.Jxl: {
+        setting.jxlQuality = quality || 75;
         break;
       }
       default: {
