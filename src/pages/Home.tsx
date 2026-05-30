@@ -116,7 +116,7 @@ export default function Home() {
       return;
     }
     try {
-      await add(setting.outputDir, ...files);
+      await add(...files);
     } catch (err) {
       console.error(err);
       toast(homeI18n("optimImageFail"), {

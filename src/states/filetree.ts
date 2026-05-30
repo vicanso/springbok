@@ -46,7 +46,7 @@ interface FiletreeState {
   start: (qualities: Record<string, number>, optimizeDisabled: boolean, outputDir: string, convertFormats: Record<string, string[]>, concurrency: number) => void;
   stripAllExif: (outputDir: string) => Promise<void>;
   restore: (hash: string, file: string) => Promise<void>;
-  add: (outputDir: string, ...files: string[]) => Promise<void>;
+  add: (...files: string[]) => Promise<void>;
 }
 
 function resetFile(file: File, resetPath = true) {
@@ -115,7 +115,7 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
     });
     return true;
   },
-  add: async (outputDir: string, ...items: string[]) => {
+  add: async (...items: string[]) => {
     const formats = ["png", "jpg", "jpeg"];
     const files: string[] = [];
     const folders: string[] = [];
