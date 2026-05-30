@@ -12,6 +12,8 @@ import {
   Ellipsis,
   Download,
   Search,
+  FolderDown,
+  Eraser,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -34,7 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import useFiletreeState, { Status, File } from "@/states/filetree";
 import useSettingSate from "@/states/setting";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/i18n";
 import { goToSetting } from "@/routers";
 import { toast } from "sonner";
@@ -102,18 +104,19 @@ export default function Home() {
   const savingsClass = "text-right w-[80px] pr-3";
   const diffClass = "text-right w-[60px] pr-3";
   const homeI18n = useI18n("home");
-  const { getQualities, getConvertFormats, setting } = useSettingSate();
-  const { files, processing, mock, add, start, restore, reset, clean, stats } =
+  const { getQualities, getConvertFormats, setting, updateOutputDir } = useSettingSate();
+  const { files, processing, mock, add, start, restore, clean, stats, stripAllExif } =
     useFiletreeState();
   const [previewFile, setPreviewFile] = useState({} as File);
+  const hasPending = files.some((f) => f.status === Status.Pending);
+  const showAgain = files.length > 0 && !hasPending;
 
   const handleSelectFiles = async (files: string[] | null) => {
     if (!files || files.length === 0) {
       return;
     }
     try {
-      await add(getConvertFormats(), ...files);
-      start(getQualities(), setting.optimizeDisabled);
+      await add(setting.outputDir, ...files);
     } catch (err) {
       console.error(err);
       toast(homeI18n("optimImageFail"), {
@@ -122,8 +125,11 @@ export default function Home() {
     }
   };
 
+  const handleSelectFilesRef = useRef(handleSelectFiles);
+  handleSelectFilesRef.current = handleSelectFiles;
+
   useEffect(() => {
-    const unlisten = listenDragDrop(handleSelectFiles);
+    const unlisten = listenDragDrop((files) => handleSelectFilesRef.current(files));
     return unlisten;
   }, []);
 
@@ -365,24 +371,63 @@ export default function Home() {
               <Ellipsis className="h-4 w-4" />
             </Button>
           </div>
-          <div className="grow h-8 text-muted-foreground text-xs leading-8">
-            {tips}
+          <div className="grow h-8 text-muted-foreground text-xs leading-8 flex items-center overflow-hidden">
+            {setting.outputDir ? (
+              <>
+                <span className="truncate grow">{setting.outputDir}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 flex-none ml-1"
+                  title={homeI18n("clearOutputDir")}
+                  onClick={() => updateOutputDir("")}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </>
+            ) : (
+              <span className="truncate whitespace-nowrap">{tips}</span>
+            )}
           </div>
-          <div className="flex-none h-8 mx-2">
+          <div className="flex-none h-8 mx-2 flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              title={homeI18n("stripExif")}
+              disabled={processing || files.length === 0}
+              onClick={() => stripAllExif(setting.outputDir)}
+            >
+              <Eraser className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={setting.outputDir ? "secondary" : "outline"}
+              size="icon"
+              className="h-8 w-8"
+              title={homeI18n("outputDir")}
+              disabled={processing}
+              onClick={() => {
+                open({ directory: true }).then((dir) => {
+                  if (dir) updateOutputDir(dir as string);
+                });
+              }}
+            >
+              <FolderDown className="h-4 w-4" />
+            </Button>
             <Button
               variant="outline"
               size="sm"
-              disabled={processing}
+              disabled={processing || files.length === 0}
               onClick={() => {
                 if (isWebMode()) {
                   mock();
                   return;
                 }
-                reset();
-                start(getQualities(), setting.optimizeDisabled);
+                start(getQualities(), setting.optimizeDisabled, setting.outputDir, getConvertFormats(), setting.concurrency);
               }}
             >
-              <RotateCw className="mr-2 h-4 w-4" /> {homeI18n("again")}
+              <RotateCw className="mr-2 h-4 w-4" />
+              {showAgain ? homeI18n("again") : homeI18n("start")}
             </Button>
           </div>
         </div>

@@ -15,7 +15,7 @@
 use crate::utils;
 use base64::{Engine as _, engine::general_purpose};
 use glob::{PatternError, glob};
-use imageoptimize::{PROCESS_DIFF, PROCESS_LOAD, PROCESS_OPTIM, run};
+use imageoptimize::{PROCESS_DIFF, PROCESS_LOAD, PROCESS_OPTIM, PROCESS_STRIP, run};
 use serde::Serialize;
 use snafu::{ResultExt, Snafu};
 use std::{
@@ -170,7 +170,10 @@ pub async fn image_convert(
 
     let metadata = fs::metadata(&file).await.context(IoSnafu)?;
 
-    fs::write(target, &image_buffer).await.context(IoSnafu)?;
+    if let Some(parent) = Path::new(&target).parent() {
+        fs::create_dir_all(parent).await.context(IoSnafu)?;
+    }
+    fs::write(&target, &image_buffer).await.context(IoSnafu)?;
 
     Ok(ImageOptimizeResult {
         diff: img.diff,
@@ -183,7 +186,11 @@ pub async fn image_convert(
 }
 
 #[command(async)]
-pub async fn image_optimize(file: String, quality: usize) -> Result<ImageOptimizeResult> {
+pub async fn image_optimize(
+    file: String,
+    quality: usize,
+    output_file: Option<String>,
+) -> Result<ImageOptimizeResult> {
     let format = get_image_format(&file)?;
     let buf = fs::read(&file).await.context(IoSnafu)?;
     let original_size = buf.len();
@@ -221,7 +228,19 @@ pub async fn image_optimize(file: String, quality: usize) -> Result<ImageOptimiz
         }
         data = general_purpose::STANDARD.encode(&image_buffer);
     }
+
+    // Ensure output directory exists when writing to a separate location
+    if let Some(ref out) = output_file
+        && let Some(parent) = Path::new(out.as_str()).parent()
+    {
+        fs::create_dir_all(parent).await.context(IoSnafu)?;
+    }
+
     if image_buffer.len() >= original_size {
+        // Cannot compress further; copy original to output dir if set
+        if let Some(ref out) = output_file {
+            fs::copy(&file, out).await.context(IoSnafu)?;
+        }
         return Ok(ImageOptimizeResult {
             width,
             height,
@@ -232,16 +251,26 @@ pub async fn image_optimize(file: String, quality: usize) -> Result<ImageOptimiz
             optim_count,
         });
     }
-    let mut hash = blake3::hash(&buf).to_hex().to_string();
-    let backup = get_backup_file(&hash);
-    if !backup.exists() {
-        // ignore error
-        if let Err(e) = fs::write(backup, buf).await {
-            hash = "".to_string();
-            println!("{e:?}")
+
+    // Only backup the original when writing in-place
+    let hash = if output_file.is_none() {
+        let mut h = blake3::hash(&buf).to_hex().to_string();
+        let backup = get_backup_file(&h);
+        if !backup.exists()
+            && let Err(e) = fs::write(backup, buf).await
+        {
+            h = "".to_string();
+            println!("{e:?}");
         }
-    }
-    fs::write(file, &image_buffer).await.context(IoSnafu)?;
+        h
+    } else {
+        "".to_string()
+    };
+
+    let write_path = output_file.as_deref().unwrap_or(file.as_str());
+    fs::write(write_path, &image_buffer)
+        .await
+        .context(IoSnafu)?;
 
     Ok(ImageOptimizeResult {
         width,
@@ -260,6 +289,30 @@ pub async fn restore_file(hash: String, file: String) -> Result<u64> {
         .await
         .context(IoSnafu)?;
     Ok(size)
+}
+
+#[command]
+pub fn has_backup_file(hash: String) -> bool {
+    get_backup_file(&hash).exists()
+}
+
+#[command(async)]
+pub async fn strip_exif_file(file: String, output_file: Option<String>) -> Result<u64> {
+    let img = run(vec![
+        vec![PROCESS_LOAD.to_string(), format!("file://{file}")],
+        vec![PROCESS_STRIP.to_string()],
+    ])
+    .await
+    .context(OptimizeProcessingSnafu)?;
+    let image_buffer = img.get_buffer().context(OptimizeProcessingSnafu)?;
+    let write_path = output_file.as_deref().unwrap_or(file.as_str());
+    if let Some(parent) = Path::new(write_path).parent() {
+        fs::create_dir_all(parent).await.context(IoSnafu)?;
+    }
+    fs::write(write_path, &image_buffer)
+        .await
+        .context(IoSnafu)?;
+    Ok(image_buffer.len() as u64)
 }
 
 #[command(async)]
