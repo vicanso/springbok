@@ -52,3 +52,24 @@ export function getSettingFromStorage() {
 export function setSettingToStorage(setting: any) {
   localStorage.setItem(settingKey, JSON.stringify(setting));
 }
+
+const optimizedKey = `${keyPrefix}.optimized`;
+
+export function getOptimizedFileHash(path: string): string | undefined {
+  const data = localStorage.getItem(optimizedKey);
+  if (!data) return undefined;
+  try {
+    return (JSON.parse(data) as Record<string, string>)[path];
+  } catch {
+    return undefined;
+  }
+}
+
+export function setOptimizedFileHash(path: string, hash: string) {
+  let map: Record<string, string> = {};
+  try {
+    map = JSON.parse(localStorage.getItem(optimizedKey) ?? "{}");
+  } catch {}
+  map[path] = hash;
+  localStorage.setItem(optimizedKey, JSON.stringify(map));
+}

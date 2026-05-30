@@ -42,14 +42,27 @@ export async function imamgeConvert(
 export async function imageOptimize(
   file: string,
   qualities: Record<string, number>,
+  outputFile?: string,
 ) {
   let format = getImageFormat(file);
   const quality = qualities[format] || 80;
   const result: OptimResult = await invoke("image_optimize", {
     file,
     quality,
+    outputFile: outputFile ?? null,
   });
   return result;
+}
+
+export async function stripExifFile(
+  file: string,
+  outputFile?: string,
+): Promise<number> {
+  const size: number = await invoke("strip_exif_file", {
+    file,
+    outputFile: outputFile ?? null,
+  });
+  return size;
 }
 
 export async function restoreFile(hash: string, file: string) {
@@ -70,4 +83,8 @@ export async function listFile(folders: string[], exts: string[]) {
 
 export async function clearExpiredBackupFiles() {
   return invoke("clear_expired_backup_files");
+}
+
+export async function hasBackupFile(hash: string): Promise<boolean> {
+  return invoke("has_backup_file", { hash });
 }

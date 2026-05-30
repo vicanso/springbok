@@ -39,6 +39,8 @@ pub fn run() {
             commands::restore_file,
             commands::list_file,
             commands::clear_expired_backup_files,
+            commands::strip_exif_file,
+            commands::has_backup_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

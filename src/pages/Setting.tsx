@@ -32,7 +32,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import useSettingSate, { ImageFormat } from "@/states/setting";
-import { JSX } from "react";
+import { JSX, useState } from "react";
+
+const QUALITY_PRESETS = {
+  high:   { png: 95, jpeg: 90, avif: 80, webp: 85, jxl: 85 },
+  medium: { png: 90, jpeg: 80, avif: 70, webp: 80, jxl: 75 },
+  low:    { png: 80, jpeg: 65, avif: 55, webp: 65, jxl: 60 },
+} as const;
 
 
 export default function Setting() {
@@ -49,10 +55,12 @@ export default function Setting() {
     toggleSupportedConvert,
     updateQuality,
     updateOptimizeDisabled,
+    updateConcurrency,
     setting,
     reset,
   } = useSettingSate();
 
+  const [presetKey, setPresetKey] = useState(0);
   const iconClassName = "mr-2 h-4 w-4";
 
   const dropdowns = (
@@ -218,7 +226,7 @@ export default function Setting() {
       }
     }
     return (
-      <div key={id} className="space-y-2">
+      <div key={`${id}-${presetKey}`} className="space-y-2">
         <Label htmlFor={id}>{item.toUpperCase()}</Label>
         <Input
           type="number"
@@ -275,6 +283,27 @@ export default function Setting() {
         </CardContent>
       </Card>
 
+      {/* concurrency */}
+      <Card className="m-4">
+        <CardHeader>
+          <CardTitle>{settingI18n("concurrency")}</CardTitle>
+          <CardDescription>{settingI18n("concurrencyTips")}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center gap-3">
+          {[1, 2, 3, 4].map((n) => (
+            <Button
+              key={n}
+              variant={setting.concurrency === n ? "default" : "outline"}
+              size="sm"
+              className="w-10"
+              onClick={() => updateConcurrency(n)}
+            >
+              {n}
+            </Button>
+          ))}
+        </CardContent>
+      </Card>
+
       {/* image quality */}
       <Card className="m-4">
         <CardHeader>
@@ -295,6 +324,25 @@ export default function Setting() {
           <CardDescription>{settingI18n("imageQualityTips")}</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4">
+          <div className="col-span-2 flex gap-2">
+            {(["high", "medium", "low"] as const).map((preset) => (
+              <Button
+                key={preset}
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  const values = QUALITY_PRESETS[preset];
+                  (Object.entries(values) as [string, number][]).forEach(
+                    ([format, quality]) => updateQuality(format, quality),
+                  );
+                  setPresetKey((k) => k + 1);
+                }}
+              >
+                {settingI18n(`preset${preset.charAt(0).toUpperCase()}${preset.slice(1)}`)}
+              </Button>
+            ))}
+          </div>
           {imageQualities}
         </CardContent>
       </Card>

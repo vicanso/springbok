@@ -14,6 +14,8 @@ interface Setting {
   webpQuality: number;
   jxlQuality: number;
   optimizeDisabled: boolean;
+  concurrency: number;
+  outputDir: string;
 }
 
 export enum ImageFormat {
@@ -34,6 +36,8 @@ function getSetting() {
     webpQuality: 80,
     jxlQuality: 75,
     optimizeDisabled: false,
+    concurrency: 2,
+    outputDir: "",
   };
 
   Object.assign(defaultSetting, getSettingFromStorage());
@@ -52,6 +56,8 @@ interface SettingState {
   updateSupportFormats: (supportFormats: string[]) => void;
   updateQuality: (format: string, quality: number) => void;
   updateOptimizeDisabled: (disabled: boolean) => void;
+  updateConcurrency: (value: number) => void;
+  updateOutputDir: (dir: string) => void;
 }
 
 const settingState = create<SettingState>()((set, get) => ({
@@ -132,6 +138,20 @@ const settingState = create<SettingState>()((set, get) => ({
   updateOptimizeDisabled: (disabled: boolean) => {
     const { setting } = get();
     setting.optimizeDisabled = disabled;
+    setSettingToStorage(setting);
+    set({
+      setting,
+    });
+  },
+  updateConcurrency: (value: number) => {
+    const { setting } = get();
+    setting.concurrency = Math.min(8, Math.max(1, value));
+    setSettingToStorage(setting);
+    set({ setting });
+  },
+  updateOutputDir: (dir: string) => {
+    const { setting } = get();
+    setting.outputDir = dir;
     setSettingToStorage(setting);
     set({
       setting,

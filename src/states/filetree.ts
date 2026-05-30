@@ -3,8 +3,11 @@ import {
   imamgeConvert,
   listFile,
   restoreFile,
+  stripExifFile,
+  hasBackupFile,
 } from "@/commands";
 import { formatError, getFileExt, getImageFormat } from "@/helpers/utils";
+import { getOptimizedFileHash, setOptimizedFileHash } from "@/storages";
 import { create } from "zustand";
 
 export enum Status {
@@ -40,14 +43,10 @@ interface FiletreeState {
     top: number;
     average: number;
   };
-  optim: (qualities: Record<string, number>, optimizeDisabled: boolean) => void;
-  start: (qualities: Record<string, number>, optimizeDisabled: boolean) => void;
-  reset: () => void;
+  start: (qualities: Record<string, number>, optimizeDisabled: boolean, outputDir: string, convertFormats: Record<string, string[]>, concurrency: number) => void;
+  stripAllExif: (outputDir: string) => Promise<void>;
   restore: (hash: string, file: string) => Promise<void>;
-  add: (
-    convertFormats: Record<string, string[]>,
-    ...files: string[]
-  ) => Promise<void>;
+  add: (...files: string[]) => Promise<void>;
 }
 
 function resetFile(file: File, resetPath = true) {
@@ -116,9 +115,7 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
     });
     return true;
   },
-  add: async (convertFormats: Record<string, string[]>, ...items: string[]) => {
-    // filter folder and file
-    // only support decode jpeg png
+  add: async (...items: string[]) => {
     const formats = ["png", "jpg", "jpeg"];
     const files: string[] = [];
     const folders: string[] = [];
@@ -141,49 +138,162 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
 
     set((state) => {
       const exists: Record<string, boolean> = {};
+      // Only deduplicate against source files
       state.files.forEach((item) => {
-        exists[item.path] = true;
+        if (!item.original) exists[item.path] = true;
       });
       const arr: File[] = [];
       files.forEach((path) => {
-        if (!path || exists[path]) {
-          return;
-        }
-        const notSupported = others.includes(path);
-        if (!notSupported) {
-          const format = getImageFormat(path);
-          const ext = getFileExt(path);
-          const targetPath = path.substring(0, path.length - ext.length);
-          (convertFormats[format] || []).forEach((ext) => {
-            const target = targetPath + ext;
-            if (!target) {
-              return;
-            }
-            const file = resetFile({} as File);
-            file.original = path;
-            file.path = target;
-            arr.push(file);
-          });
-        }
-
+        if (!path || exists[path]) return;
         const file = resetFile({} as File);
         file.path = path;
-        if (notSupported) {
-          file.status = Status.NotSupported;
-        }
+        if (others.includes(path)) file.status = Status.NotSupported;
         arr.push(file);
       });
       state.files.push(...arr);
-      return {
-        files: state.files,
-      };
+      return { files: state.files };
     });
   },
-  start: (qualities: Record<string, number>, optimizeDisabled: boolean) => {
-    const { processing, optim } = get();
-    if (!processing) {
-      optim(qualities, optimizeDisabled);
+  start: (
+    qualities: Record<string, number>,
+    optimizeDisabled: boolean,
+    outputDir: string,
+    convertFormats: Record<string, string[]>,
+    concurrency: number,
+  ) => {
+    if (get().processing) return;
+
+    // Rebuild file list with current settings
+    set((state) => {
+      const sourceFiles = state.files.filter((f) => !f.original);
+      sourceFiles.forEach((f) => {
+        if (f.status !== Status.NotSupported) resetFile(f, false);
+      });
+      const conversionEntries: File[] = [];
+      sourceFiles.forEach((sourceFile) => {
+        if (sourceFile.status === Status.NotSupported) return;
+        const path = sourceFile.path;
+        const ext = getFileExt(path);
+        const format = getImageFormat(path);
+        const basename = path.replace(/\\/g, "/").split("/").pop()!;
+        const targetBase = outputDir
+          ? `${outputDir}/${basename.substring(0, basename.length - ext.length)}`
+          : path.substring(0, path.length - ext.length);
+        (convertFormats[format] || []).forEach((convExt) => {
+          const target = targetBase + convExt;
+          if (!target) return;
+          const f = resetFile({} as File);
+          f.original = path;
+          f.path = target;
+          conversionEntries.push(f);
+        });
+      });
+      return { files: [...sourceFiles, ...conversionEntries] };
+    });
+
+    // Group by source file: optimization first, then conversions (same source must be serial)
+    const groupMap = new Map<string, File[]>();
+    get().files.forEach((file) => {
+      if (file.status === Status.NotSupported) return;
+      const key = file.original ?? file.path;
+      if (!groupMap.has(key)) groupMap.set(key, []);
+      groupMap.get(key)!.push(file);
+    });
+    const groups = Array.from(groupMap.values()).map((g) =>
+      g.sort((a, b) => (a.original ? 1 : 0) - (b.original ? 1 : 0)),
+    );
+
+    if (groups.length === 0) return;
+    set({ processing: true });
+
+    const flush = () => set({ files: [...get().files] });
+
+    const processFile = async (file: File): Promise<void> => {
+      file.status = Status.Processing;
+      flush();
+      try {
+        let data;
+        if (file.original) {
+          data = await imamgeConvert(file.original, file.path, qualities);
+        } else if (optimizeDisabled) {
+          file.status = Status.Ignored;
+          flush();
+          return;
+        } else {
+          // Skip if already optimized in a previous session
+          const storedHash = getOptimizedFileHash(file.path);
+          if (storedHash && await hasBackupFile(storedHash)) {
+            file.status = Status.Ignored;
+            flush();
+            return;
+          }
+          let outputFile: string | undefined;
+          if (outputDir) {
+            const basename = file.path.replace(/\\/g, "/").split("/").pop()!;
+            outputFile = `${outputDir}/${basename}`;
+          }
+          data = await imageOptimize(file.path, qualities, outputFile);
+        }
+        file.width = data.width;
+        file.height = data.height;
+        file.size = data.size;
+        file.savings = 1 - data.size / data.original_size;
+        file.status = file.savings > 0 ? Status.Success : Status.NotModified;
+        file.diff = data.diff;
+        file.hash = data.hash;
+        // Record hash so the file can be skipped on future runs
+        if (file.hash && !outputDir) {
+          setOptimizedFileHash(file.path, file.hash);
+        }
+      } catch (err) {
+        const error = formatError(err);
+        file.status = Status.Fail;
+        file.message = `${error.message}[${error.category}]`;
+      }
+      flush();
+    };
+
+    const processGroup = async (group: File[]): Promise<void> => {
+      for (const file of group) {
+        await processFile(file);
+      }
+    };
+
+    // Dispatch groups with limited concurrency
+    const limit = Math.max(1, concurrency);
+    const queue = [...groups];
+    let active = 0;
+    new Promise<void>((resolve) => {
+      const dispatch = () => {
+        if (queue.length === 0 && active === 0) { resolve(); return; }
+        while (active < limit && queue.length > 0) {
+          active++;
+          processGroup(queue.shift()!).then(() => { active--; dispatch(); });
+        }
+      };
+      dispatch();
+    }).then(() => set({ processing: false }));
+  },
+  stripAllExif: async (outputDir: string) => {
+    const { files } = get();
+    set({ processing: true });
+    for (const file of files) {
+      if (file.status === Status.NotSupported || file.status === Status.Ignored) {
+        continue;
+      }
+      try {
+        let outputFile: string | undefined;
+        if (outputDir) {
+          const basename = file.path.replace(/\\/g, "/").split("/").pop()!;
+          outputFile = `${outputDir}/${basename}`;
+        }
+        const size = await stripExifFile(file.path, outputFile);
+        file.size = size;
+      } catch (e) {
+        console.error(e);
+      }
     }
+    set({ files, processing: false });
   },
   restore: async (hash: string, file: string) => {
     const { files } = get();
@@ -197,73 +307,6 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
         files,
       });
     }
-  },
-  reset: () => {
-    const { files } = get();
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      resetFile(file, false);
-    }
-    set({
-      files,
-    });
-  },
-  optim: (qualities: Record<string, number>, optimizeDisabled: boolean) => {
-    const { files } = get();
-    const index = files.findIndex((item) => item.status === Status.Pending);
-    if (index === -1) {
-      set({
-        processing: false,
-      });
-      return;
-    }
-    const file = files[index];
-    file.status = Status.Processing;
-    set({
-      processing: true,
-      files,
-    });
-    Promise.resolve()
-      .then(() => {
-        if (file.original) {
-          return imamgeConvert(file.original, file.path, qualities);
-        }
-        if (optimizeDisabled) {
-          return null;
-        }
-        return imageOptimize(file.path, qualities);
-      })
-      .then((data) => {
-        if (!data) {
-          file.status = Status.Ignored;
-          return;
-        }
-        file.width = data.width;
-        file.height = data.height;
-        file.size = data.size;
-        file.savings = 1 - data.size / data.original_size;
-        if (file.savings > 0) {
-          file.status = Status.Success;
-        } else {
-          file.status = Status.NotModified;
-        }
-        file.diff = data.diff;
-        file.hash = data.hash;
-      })
-      .catch((err) => {
-        const data = formatError(err);
-        file.status = Status.Fail;
-        file.message = `${data.message}[${data.category}]`;
-      })
-      .finally(() => {
-        // the files may push new file
-        const { files } = get();
-        files[index] = file;
-        set({
-          files,
-        });
-        get().optim(qualities, optimizeDisabled);
-      });
   },
   stats: () => {
     const { files } = get();
