@@ -4,10 +4,8 @@ import {
   listFile,
   restoreFile,
   stripExifFile,
-  hasBackupFile,
 } from "@/commands";
 import { formatError, getFileExt, getImageFormat } from "@/helpers/utils";
-import { getOptimizedFileHash, setOptimizedFileHash } from "@/storages";
 import { create } from "zustand";
 
 export enum Status {
@@ -220,13 +218,6 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
           flush();
           return;
         } else {
-          // Skip if already optimized in a previous session
-          const storedHash = getOptimizedFileHash(file.path);
-          if (storedHash && await hasBackupFile(storedHash)) {
-            file.status = Status.Ignored;
-            flush();
-            return;
-          }
           let outputFile: string | undefined;
           if (outputDir) {
             const basename = file.path.replace(/\\/g, "/").split("/").pop()!;
@@ -241,10 +232,6 @@ const filetreeState = create<FiletreeState>()((set, get) => ({
         file.status = file.savings > 0 ? Status.Success : Status.NotModified;
         file.diff = data.diff;
         file.hash = data.hash;
-        // Record hash so the file can be skipped on future runs
-        if (file.hash && !outputDir) {
-          setOptimizedFileHash(file.path, file.hash);
-        }
       } catch (err) {
         const error = formatError(err);
         file.status = Status.Fail;
